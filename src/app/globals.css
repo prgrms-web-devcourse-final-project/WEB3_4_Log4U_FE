@@ -6,10 +6,19 @@
 }
 
 @theme inline {
+  --color-neutral: #F5F0E6;
+  --color-primary: #6C584C;
+  --color-secondary: #DAD7CD;
+  --color-accent: #A4161A;
+  --color-text: #3C3C3C;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+p {
+  --color-text: #3C3C3C;
 }
 
 @media (prefers-color-scheme: dark) {
