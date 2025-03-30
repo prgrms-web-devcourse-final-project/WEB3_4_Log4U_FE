@@ -13,8 +13,8 @@ function MainContent() {
 export function LeftSideBar() {
   return (
     <SideBar>
-      <h1>log4U</h1>
-      <div>
+      <h1 className="grow-1 text-text text-4xl">log4U</h1>
+      <div className="grow-2">
         <div className="flex items-center mb-2">
           <Image src="/home.png" alt="home image" width={50} height={50} />
           <Link href="/">

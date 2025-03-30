@@ -8,7 +8,7 @@ interface SideBarProps {
 
 export default function SideBar({ children }: SideBarProps): React.JSX.Element {
   return (
-    <aside className="bg-neutral justify-items-center content-center">
+    <aside className="bg-neutral flex flex-col justify-center items-center">
       {children}
     </aside>
   );
