@@ -1,6 +1,5 @@
 import Image from "next/image";
 import GoogleMap from "@/app/googleMap";
-import { LeftSideBar, RightSideBar } from "@/ui/SideBar";
 import { Pagination } from "@/ui/pagination";
 import Link from "next/link";
 
@@ -126,13 +125,5 @@ export function MainContent() {
 }
 
 export default function Home() {
-  return (
-    <div className="bg-neutral h-screen text-text box-border">
-      <div className="h-full w-full grid grid-cols-[280px_1fr_280px] gap-4">
-        <LeftSideBar></LeftSideBar>
-        <MainContent></MainContent>
-        <RightSideBar></RightSideBar>
-      </div>
-    </div>
-  );
+  return <MainContent></MainContent>;
 }
