@@ -2,6 +2,7 @@ import Image from "next/image";
 import GoogleMap from "@/app/googleMap";
 import { LeftSideBar, RightSideBar } from "@/ui/SideBar";
 import { Pagination } from "@/ui/pagination";
+import Link from "next/link";
 
 const diaries = [
   {
@@ -93,17 +94,19 @@ function Diaries() {
       <div className="grid grid-cols-3 grid-rows-3 gap-4">
         {diaries.map((diary, index) => (
           <div key={index} className="">
-            <Image
-              src={diary.thumbnailUrl}
-              alt={"diary-thumbnail"}
-              width={100}
-              height={100}
-            />
-            <div className="flex justify-between">
-              <span>{diary.name}</span>
-              <span>{diary.likeCount}</span>
-            </div>
-            <span>{diary.authorName}</span>
+            <Link href={"/diary/1?modal=true"} shallow>
+              <Image
+                src={diary.thumbnailUrl}
+                alt={"diary-thumbnail"}
+                width={100}
+                height={100}
+              />
+              <div className="flex justify-between">
+                <span>{diary.name}</span>
+                <span>{diary.likeCount}</span>
+              </div>
+              <span>{diary.authorName}</span>
+            </Link>
           </div>
         ))}
       </div>
