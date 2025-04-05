@@ -40,7 +40,7 @@ export function LeftSideBar() {
             width={50}
             height={50}
           />
-          <Link href="/add-diary">
+          <Link href="/diaries/new">
             <span className="p-5 text-2xl font-bold">만들기</span>
           </Link>
         </div>
