@@ -8,10 +8,7 @@ import { DiaryService } from "@root/services/diary";
 import { UserService } from "@root/services/user";
 import { Comment } from "@root/types/comment";
 import { User } from "@root/types/user";
-
-function randomPicture(width: number, height: number): string {
-  return `https://picsum.photos/${width}/${height}`;
-}
+import { ImageUtil } from "@root/utils/image.util";
 
 export default function DiaryPage() {
   const router = useRouter();
@@ -37,7 +34,7 @@ export default function DiaryPage() {
       author: {
         userId: 101,
         nickname: "ppakse",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
     {
@@ -47,7 +44,7 @@ export default function DiaryPage() {
       author: {
         userId: 102,
         nickname: "mjpark",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
     {
@@ -57,7 +54,7 @@ export default function DiaryPage() {
       author: {
         userId: 103,
         nickname: "leesom",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
     {
@@ -67,7 +64,7 @@ export default function DiaryPage() {
       author: {
         userId: 104,
         nickname: "rosy",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
     {
@@ -77,7 +74,7 @@ export default function DiaryPage() {
       author: {
         userId: 105,
         nickname: "mark",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
     {
@@ -87,7 +84,7 @@ export default function DiaryPage() {
       author: {
         userId: 106,
         nickname: "cr7",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
     {
@@ -97,7 +94,7 @@ export default function DiaryPage() {
       author: {
         userId: 107,
         nickname: "dzew",
-        thumbnailUrl: randomPicture(40, 40),
+        thumbnailUrl: ImageUtil.randomPicture(40, 40),
       },
     },
   ];
@@ -185,7 +182,7 @@ export default function DiaryPage() {
         author: {
           userId: user?.userId ?? 0,
           nickname: "me", // 실제로는 현재 사용자의 닉네임을 가져와야 함
-          thumbnailUrl: randomPicture(10, 10), // 실제로는 현재 사용자의 프로필 이미지를 가져와야 함
+          thumbnailUrl: ImageUtil.randomPicture(10, 10), // 실제로는 현재 사용자의 프로필 이미지를 가져와야 함
         },
       };
 
@@ -285,7 +282,7 @@ export default function DiaryPage() {
       <div className="w-3/5 bg-black relative">
         {
           <img
-            src={diary.thumbnailUrl ?? randomPicture(800, 600)}
+            src={diary.thumbnailUrl ?? ImageUtil.randomPicture(800, 600)}
             alt="다이어리 썸네일"
             className="w-full h-full object-contain"
           />
@@ -300,7 +297,7 @@ export default function DiaryPage() {
             <div className="w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200">
               {/* 실제 구현에서는 사용자 프로필 이미지 사용 */}
               <img
-                src={user?.profileImage ?? randomPicture(40, 40)}
+                src={user?.profileImage ?? ImageUtil.randomPicture(40, 40)}
                 alt="프로필"
                 className="w-full h-full object-cover"
               />
