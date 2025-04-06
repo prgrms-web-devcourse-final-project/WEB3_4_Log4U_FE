@@ -1,7 +1,8 @@
 import Image from "next/image";
-import GoogleMap from "@/app/googleMap";
+import GoogleMapComponent from "@/app/googleMap";
 import { Pagination } from "@/ui/pagination";
 import Link from "next/link";
+import React from "react";
 
 const diaries = [
   {
@@ -118,7 +119,17 @@ export function MainContent() {
   return (
     <div className="max-w-[700px] mx-[280px] flex flex-col justify-items-center content-start">
       <Profile></Profile>
-      <GoogleMap></GoogleMap>
+      <GoogleMapComponent
+        markers={[
+          {
+            id: 1,
+            lat: 37.5665,
+            lng: 126.978,
+            profileUrl: "/api/placeholder/60/60",
+            count: 9,
+          },
+        ]}
+      />{" "}
       <Diaries></Diaries>
     </div>
   );
