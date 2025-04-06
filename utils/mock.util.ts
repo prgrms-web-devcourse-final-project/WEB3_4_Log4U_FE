@@ -316,12 +316,13 @@ export namespace MockUtil {
         profileImage: randomProfileImage(),
         followers: 100 + Math.floor(Math.random() * 900),
         followings: 50 + Math.floor(Math.random() * 200),
-        diaries: IDiary.Details(3), // 최근 다이어리 3개만 포함
+        list: IDiary.Details(diaryCount).slice(0, 9),
         pageInfo: {
           hasNext: true,
-          nextCursor: "cursor_123456",
+          page: 1,
+          totalPages: Math.ceil(diaryCount / 9),
           totalElements: diaryCount,
-          size: 3,
+          size: 9,
         },
       };
     }
