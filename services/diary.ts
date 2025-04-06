@@ -1,5 +1,6 @@
 import { axiosInstance } from "./axios.instance";
 import { Diary } from "../types/diary";
+import { Pagination } from "@root/types/pagination";
 
 // 다이어리 생성 API 호출 함수
 export class DiaryService {
@@ -58,6 +59,28 @@ export class DiaryService {
     } catch (error) {
       console.error("Error deleting diary:", error);
       throw error; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
+    }
+  }
+
+  static async getDiaries(params: {
+    size: string;
+    visibility: string;
+    page: string;
+    sort: string;
+  }) {
+    try {
+      return await axiosInstance
+        .request<Pagination.IOffSet<Diary.Summary>>({
+          url: this.GET_DIARY_LIST_API,
+          method: "GET",
+          params,
+        })
+        .then((response) => {
+          return response.data;
+        });
+    } catch (e) {
+      console.error("Error fetching diaries:", e);
+      throw e; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
     }
   }
 }
