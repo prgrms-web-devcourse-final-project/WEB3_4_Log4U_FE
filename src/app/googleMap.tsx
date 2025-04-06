@@ -72,37 +72,38 @@ export default function GoogleMapComponent({
       </div>
     );
 
-  console.log(markers, "markers");
   return (
-    <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      center={center}
-      zoom={11}
-      options={{
-        disableDefaultUI: true,
-        zoomControl: true,
-        styles: [
-          {
-            featureType: "poi",
-            elementType: "labels",
-            stylers: [{ visibility: "off" }],
-          },
-        ],
-      }}
-    >
-      {markers.map((marker) => (
-        <Marker
-          key={marker.id}
-          position={{ lat: marker.lat, lng: marker.lng }}
-          onClick={() => setSelectedMarker(marker)}
-          icon={{
-            url: marker.profileUrl,
-            scaledSize: new window.google.maps.Size(40, 40),
-          }}
-        >
-          <div>{renderCustomMarker(marker)}</div>
-        </Marker>
-      ))}
-    </GoogleMap>
+    <div className={"h-[250px]"}>
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={center}
+        zoom={11}
+        options={{
+          disableDefaultUI: true,
+          zoomControl: true,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        }}
+      >
+        {markers.map((marker) => (
+          <Marker
+            key={marker.id}
+            position={{ lat: marker.lat, lng: marker.lng }}
+            onClick={() => setSelectedMarker(marker)}
+            icon={{
+              url: marker.profileUrl,
+              scaledSize: new window.google.maps.Size(40, 40),
+            }}
+          >
+            <div>{renderCustomMarker(marker)}</div>
+          </Marker>
+        ))}
+      </GoogleMap>
+    </div>
   );
 }
