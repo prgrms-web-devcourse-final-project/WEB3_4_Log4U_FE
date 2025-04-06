@@ -10,7 +10,7 @@ interface SideBarProps {
 
 export default function SideBar({ children }: SideBarProps): React.JSX.Element {
   return (
-    <aside className="bg-neutral flex flex-col justify-center items-center border-l border-r border-gray-300">
+    <aside className="bg-neutral flex flex-col justify-center items-center border-l border-r border-gray-300 py-10">
       {children}
     </aside>
   );
