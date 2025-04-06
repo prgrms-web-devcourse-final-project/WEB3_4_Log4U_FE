@@ -18,4 +18,9 @@ export namespace Pagination {
     list: T[];
     pageInfo: CursorMeta;
   }
+
+  export interface IOffSet<T> {
+    list: T[];
+    pageInfo: OffsetMeta;
+  }
 }
