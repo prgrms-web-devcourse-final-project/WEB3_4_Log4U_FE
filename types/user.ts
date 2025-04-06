@@ -2,7 +2,7 @@ import { Diary } from "@root/types/diary";
 import { Pagination } from "@root/types/pagination";
 
 export namespace User {
-  export interface Me {
+  export interface Me extends Pagination.IOffSet<Diary.Detail> {
     userId: number;
 
     name: string;
@@ -18,9 +18,5 @@ export namespace User {
     followers: number;
 
     followings: number;
-
-    diaries: Diary.Detail[];
-
-    pageInfo: Pagination.CursorMeta;
   }
 }
