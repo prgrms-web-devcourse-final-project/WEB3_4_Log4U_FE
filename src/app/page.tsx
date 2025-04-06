@@ -11,26 +11,26 @@ import { Diary } from "@root/types/diary";
 
 function MyDiaries(diaries: Diary.Detail[]) {
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="mt-6 grid grid-cols-3 gap-4">
       {diaries.length > 0
         ? diaries.slice(0, 9).map((diary) => (
             <Link
               href={`/diaries/${diary.diaryId}`}
               key={diary.diaryId}
-              className="border rounded overflow-hidden aspect-square flex flex-col h-[250px]"
+              className="block border rounded-lg overflow-hidden hover:shadow-md transition"
             >
-              <div className="w-full h-full flex-1 bg-gray-200">
+              <div className="h-40 bg-gray-200 relative">
                 <img
-                  src={diary.thumbnailUrl || "/api/placeholder/300/300"}
-                  alt="다이어리 썸네일"
-                  className="w-full max-h-[166px]"
+                  src={diary.thumbnailUrl || "/api/placeholder/300/200"}
+                  alt="다이어리 이미지"
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <div className="p-2 text-center text-sm text-gray-600 h-16 flex flex-col justify-center">
-                <p>다이어리 여행,</p>
-                <p>
+              <div className="p-3 text-sm text-center text-gray-700">
+                <div>다이어리 여행,</div>
+                <div>
                   {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
-                </p>
+                </div>
               </div>
             </Link>
           ))
