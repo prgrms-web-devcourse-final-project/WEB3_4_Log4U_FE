@@ -14,4 +14,6 @@ export namespace Comment {
       thumbnailUrl: string;
     };
   }
+
+  export class Detail {}
 }
