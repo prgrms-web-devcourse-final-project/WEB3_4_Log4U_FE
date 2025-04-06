@@ -1,11 +1,17 @@
 export namespace Pagination {
-  export interface CursorMeta {
+  export interface OffsetMeta {
     page: number;
     size: number;
     totalElements: number;
     totalPages: number;
     hasNext: boolean;
-    nextCursor: number;
+  }
+
+  export interface CursorMeta {
+    size: number;
+    totalElements: number;
+    hasNext: boolean;
+    nextCursor: string;
   }
 
   export interface ICursor<T> {
