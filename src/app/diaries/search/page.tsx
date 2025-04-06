@@ -223,7 +223,7 @@ export default function SearchPage() {
           ) : (
             diaries.map((diary) => (
               <Link
-                href={`/diary/${diary.diaryId}`}
+                href={`/diaries/${diary.diaryId}`}
                 key={diary.diaryId}
                 className="block border rounded-lg overflow-hidden hover:shadow-md transition"
               >
