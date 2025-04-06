@@ -239,7 +239,7 @@ export default function SearchPage() {
                 <div className="p-3 text-sm text-center text-gray-700">
                   <div>다이어리 여행,</div>
                   <div>
-                    {diary.dongmyun} 동, {diary.weatherInfo}
+                    {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
                   </div>
                 </div>
               </Link>

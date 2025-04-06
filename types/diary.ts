@@ -15,6 +15,13 @@ export namespace Diary {
     SNOWY: "SNOWY",
   } as const;
 
+  export const WeatherMap = {
+    [WeatherType.SUNNY]: "☀️ 맑음",
+    [WeatherType.CLOUDY]: "☁️ 흐림",
+    [WeatherType.RAINY]: "🌧️ 비",
+    [WeatherType.SNOWY]: "❄️ 눈",
+  } as const;
+
   export type WeatherType = (typeof WeatherType)[keyof typeof WeatherType];
   export const Visibility = {
     PUBLIC: "PUBLIC",
