@@ -39,24 +39,45 @@ export namespace Diary {
   }
 
   export interface Detail {
-    id: number;
+    diaryId: number;
 
-    title: string;
-
-    content: string;
+    userId: number;
 
     latitude: number;
 
     longitude: number;
 
+    title: string;
+
+    content: string;
+
     weatherInfo: WeatherType;
 
     visibility: Visibility;
 
+    createdAt: string;
+
+    updatedAt: string;
+
+    thumbnailUrl: string;
+
+    likeCount: number;
+
     mediaList: DiaryMedia[];
   }
 
-  export interface CreateDto extends Omit<Diary.Detail, "id"> {}
+  export interface CreateDto
+    extends Pick<
+      Diary.Detail,
+      | "latitude"
+      | "longitude"
+      | "title"
+      | "content"
+      | "weatherInfo"
+      | "visibility"
+      | "thumbnailUrl"
+      | "mediaList"
+    > {}
 
   export interface UpdateDto extends CreateDto {}
 

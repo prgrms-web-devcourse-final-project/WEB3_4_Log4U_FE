@@ -77,6 +77,8 @@ const DiaryCreatePage: FC = () => {
       title: title,
       visibility: visibility,
       weatherInfo: weather,
+      // @todo: 추후 수정 필요.
+      thumbnailUrl: "",
     };
 
     console.log("formData", formData);
