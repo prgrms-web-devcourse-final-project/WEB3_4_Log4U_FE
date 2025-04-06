@@ -4,12 +4,11 @@ import { Diary } from "../types/diary";
 // 다이어리 생성 API 호출 함수
 export class DiaryService {
   private static CREATE_DIARY_API = "/diaries";
+  private static UPDATE_DIARY_API = (id: number) => `/diaries/${id}`;
   private static GET_DIARY_LIST_API = "/diaries";
   private static GET_DIARY_DETAIL_API = (id: number) => `/diaries/${id}`;
 
   static async createDiary(newDiary: Diary.CreateDto): Promise<void> {
-    console.log(process.env.NEXT_PUBLIC_API_BASE_URL, "API_BASE_URL");
-    console.log("hi");
     try {
       await axiosInstance.request<unknown, void, Diary.CreateDto>({
         url: this.CREATE_DIARY_API,
@@ -18,6 +17,33 @@ export class DiaryService {
       });
     } catch (error) {
       console.error("Error creating diary:", error);
+      throw error; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
+    }
+  }
+
+  static async updateDiary(id: string, updateDto: Diary.UpdateDto) {
+    try {
+      await axiosInstance.request<unknown, void, Diary.UpdateDto>({
+        url: this.UPDATE_DIARY_API(parseInt(id)),
+        method: "PATCH",
+        data: updateDto,
+      });
+    } catch (error) {
+      console.error("Error creating diary:", error);
+      throw error; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
+    }
+  }
+
+  static async getDiary(id: string): Promise<Diary.Detail> {
+    try {
+      const { data } = await axiosInstance.request<Diary.Detail>({
+        url: this.GET_DIARY_DETAIL_API(parseInt(id)),
+        method: "GET",
+      });
+
+      return data;
+    } catch (error) {
+      console.error("Error fetching diary:", error);
       throw error; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
     }
   }

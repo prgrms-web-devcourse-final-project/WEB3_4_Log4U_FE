@@ -58,5 +58,7 @@ export namespace Diary {
 
   export interface CreateDto extends Omit<Diary.Detail, "id"> {}
 
+  export interface UpdateDto extends CreateDto {}
+
   export interface Summary {}
 }
