@@ -2,7 +2,6 @@
 import { Diary } from "@root/types/diary";
 import { Comment } from "@root/types/comment";
 import { User } from "@root/types/user";
-import { Pagination } from "@root/types/pagination";
 
 // 임의의 날짜 생성 (최근 30일 이내)
 function randomRecentDate(): string {
@@ -21,53 +20,6 @@ function randomKoreaLocation(): { lat: number; lng: number } {
     lat: parseFloat(lat.toFixed(6)),
     lng: parseFloat(lng.toFixed(6)),
   };
-}
-
-// 랜덤 도시 이름
-function randomCity(): string {
-  const cities = [
-    "서울특별시",
-    "부산광역시",
-    "인천광역시",
-    "대구광역시",
-    "광주광역시",
-    "대전광역시",
-    "울산광역시",
-    "세종특별자치시",
-    "경기도",
-    "강원도",
-    "충청북도",
-    "충청남도",
-    "전라북도",
-    "전라남도",
-    "경상북도",
-    "경상남도",
-    "제주도",
-  ];
-  const districts = [
-    "중구",
-    "동구",
-    "서구",
-    "남구",
-    "북구",
-    "강남구",
-    "강북구",
-    "강서구",
-    "강동구",
-    "성북구",
-    "성동구",
-    "용산구",
-    "종로구",
-    "마포구",
-    "영등포구",
-    "서초구",
-    "송파구",
-    "은평구",
-    "광진구",
-    "중랑구",
-  ];
-
-  return `${cities[Math.floor(Math.random() * cities.length)]} ${districts[Math.floor(Math.random() * districts.length)]}`;
 }
 
 // 랜덤 제목 생성
@@ -243,6 +195,7 @@ export namespace MockUtil {
           mediaList.push(createRandomMedia(j));
         }
 
+        const { sido, sigungu, dongmyun } = generateRandomAddress();
         diaries.push({
           diaryId: 1000 + i,
           userId: 100 + Math.floor(Math.random() * 20),
@@ -258,6 +211,9 @@ export namespace MockUtil {
             mediaList.length > 0 ? mediaList[0].url : randomImageUrl(),
           likeCount: Math.floor(Math.random() * 1000),
           mediaList: mediaList,
+          sido,
+          sigungu,
+          dongmyun,
         });
       }
 
@@ -343,7 +299,7 @@ export namespace MockUtil {
 
     export function Details(count: number): Comment.Detail[] {
       // Comment.Detail 인터페이스 구현이 필요함
-      return [] as any;
+      return [];
     }
   }
 
@@ -425,3 +381,575 @@ export namespace MockUtil {
 // const mockDiaries = MockUtil.IDiary.Details(5); // 5개의 랜덤 다이어리 생성
 // const mockComments = MockUtil.IComment.Summaries(10); // 10개의 랜덤 댓글 생성
 // const mockUser = MockUtil.IUser.Me(); // 현재 사용자 정보 생성
+// 위치 정보 랜덤 생성 함수
+
+// 한국 행정구역 데이터
+const koreaRegions = {
+  // 서울
+  서울특별시: {
+    sigungu: [
+      "강남구",
+      "강동구",
+      "강북구",
+      "강서구",
+      "관악구",
+      "광진구",
+      "구로구",
+      "금천구",
+      "노원구",
+      "도봉구",
+      "동대문구",
+      "동작구",
+      "마포구",
+      "서대문구",
+      "서초구",
+      "성동구",
+      "성북구",
+      "송파구",
+      "양천구",
+      "영등포구",
+      "용산구",
+      "은평구",
+      "종로구",
+      "중구",
+      "중랑구",
+    ],
+    dongmyun: {
+      강남구: [
+        "역삼동",
+        "개포동",
+        "청담동",
+        "삼성동",
+        "대치동",
+        "신사동",
+        "논현동",
+        "압구정동",
+        "세곡동",
+        "자곡동",
+        "율현동",
+        "일원동",
+      ],
+      서초구: ["서초동", "잠원동", "반포동", "방배동", "양재동", "내곡동"],
+      송파구: [
+        "가락동",
+        "거여동",
+        "마천동",
+        "문정동",
+        "방이동",
+        "삼전동",
+        "석촌동",
+        "송파동",
+        "오금동",
+        "잠실동",
+        "장지동",
+        "풍납동",
+      ],
+      강서구: [
+        "가양동",
+        "개화동",
+        "공항동",
+        "등촌동",
+        "방화동",
+        "염창동",
+        "화곡동",
+      ],
+      마포구: [
+        "망원동",
+        "상암동",
+        "서교동",
+        "성산동",
+        "신수동",
+        "연남동",
+        "합정동",
+      ],
+    },
+  },
+  // 부산
+  부산광역시: {
+    sigungu: [
+      "강서구",
+      "금정구",
+      "남구",
+      "동구",
+      "동래구",
+      "부산진구",
+      "북구",
+      "사상구",
+      "사하구",
+      "서구",
+      "수영구",
+      "연제구",
+      "영도구",
+      "중구",
+      "해운대구",
+      "기장군",
+    ],
+    dongmyun: {
+      해운대구: ["우동", "중동", "좌동", "송정동", "반여동", "재송동"],
+      수영구: ["남천동", "망미동", "광안동", "민락동", "수영동"],
+      부산진구: [
+        "부전동",
+        "양정동",
+        "전포동",
+        "범천동",
+        "범전동",
+        "연지동",
+        "초읍동",
+      ],
+    },
+  },
+  // 인천
+  인천광역시: {
+    sigungu: [
+      "계양구",
+      "남동구",
+      "동구",
+      "미추홀구",
+      "부평구",
+      "서구",
+      "연수구",
+      "중구",
+      "강화군",
+      "옹진군",
+    ],
+    dongmyun: {
+      연수구: ["송도동", "연수동", "청학동", "동춘동", "옥련동"],
+      서구: ["검암동", "연희동", "청라동", "가정동", "석남동"],
+    },
+  },
+  // 경기도
+  경기도: {
+    sigungu: [
+      "고양시",
+      "과천시",
+      "광명시",
+      "광주시",
+      "구리시",
+      "군포시",
+      "김포시",
+      "남양주시",
+      "동두천시",
+      "부천시",
+      "성남시",
+      "수원시",
+      "시흥시",
+      "안산시",
+      "안성시",
+      "안양시",
+      "양주시",
+      "여주시",
+      "오산시",
+      "용인시",
+      "의왕시",
+      "의정부시",
+      "이천시",
+      "파주시",
+      "평택시",
+      "포천시",
+      "하남시",
+      "화성시",
+      "가평군",
+      "양평군",
+      "연천군",
+    ],
+    dongmyun: {
+      성남시: ["수정구", "중원구", "분당구"],
+      수원시: ["장안구", "권선구", "팔달구", "영통구"],
+      용인시: ["처인구", "기흥구", "수지구"],
+    },
+  },
+  // 기타 광역시
+  대전광역시: {
+    sigungu: ["대덕구", "동구", "서구", "유성구", "중구"],
+    dongmyun: {
+      유성구: ["신성동", "전민동", "구성동", "관평동", "노은동"],
+    },
+  },
+  대구광역시: {
+    sigungu: [
+      "남구",
+      "달서구",
+      "동구",
+      "북구",
+      "서구",
+      "수성구",
+      "중구",
+      "달성군",
+    ],
+    dongmyun: {
+      수성구: ["범어동", "만촌동", "황금동", "중동"],
+    },
+  },
+  광주광역시: {
+    sigungu: ["광산구", "남구", "동구", "북구", "서구"],
+    dongmyun: {
+      서구: ["치평동", "풍암동", "금호동", "상무동"],
+    },
+  },
+  울산광역시: {
+    sigungu: ["남구", "동구", "북구", "중구", "울주군"],
+    dongmyun: {
+      남구: ["삼산동", "달동", "신정동", "옥동"],
+    },
+  },
+  // 도
+  강원도: {
+    sigungu: [
+      "강릉시",
+      "동해시",
+      "삼척시",
+      "속초시",
+      "원주시",
+      "춘천시",
+      "태백시",
+      "고성군",
+      "양구군",
+      "양양군",
+      "영월군",
+      "인제군",
+      "정선군",
+      "철원군",
+      "평창군",
+      "홍천군",
+      "화천군",
+      "횡성군",
+    ],
+    dongmyun: {
+      강릉시: ["교동", "노암동", "성덕동", "홍제동", "월호평동"],
+      원주시: ["단계동", "무실동", "반곡동", "일산동"],
+    },
+  },
+  충청북도: {
+    sigungu: [
+      "제천시",
+      "청주시",
+      "충주시",
+      "괴산군",
+      "단양군",
+      "보은군",
+      "영동군",
+      "옥천군",
+      "음성군",
+      "증평군",
+      "진천군",
+    ],
+    dongmyun: {
+      청주시: ["상당구", "서원구", "흥덕구", "청원구"],
+    },
+  },
+  충청남도: {
+    sigungu: [
+      "계룡시",
+      "공주시",
+      "논산시",
+      "당진시",
+      "보령시",
+      "서산시",
+      "아산시",
+      "천안시",
+      "금산군",
+      "부여군",
+      "서천군",
+      "예산군",
+      "청양군",
+      "태안군",
+      "홍성군",
+    ],
+    dongmyun: {
+      천안시: ["동남구", "서북구"],
+    },
+  },
+  전라북도: {
+    sigungu: [
+      "군산시",
+      "김제시",
+      "남원시",
+      "익산시",
+      "전주시",
+      "정읍시",
+      "고창군",
+      "무주군",
+      "부안군",
+      "순창군",
+      "완주군",
+      "임실군",
+      "장수군",
+      "진안군",
+    ],
+    dongmyun: {
+      전주시: ["완산구", "덕진구"],
+    },
+  },
+  전라남도: {
+    sigungu: [
+      "광양시",
+      "나주시",
+      "목포시",
+      "순천시",
+      "여수시",
+      "강진군",
+      "고흥군",
+      "곡성군",
+      "구례군",
+      "담양군",
+      "무안군",
+      "보성군",
+      "신안군",
+      "영광군",
+      "영암군",
+      "완도군",
+      "장성군",
+      "장흥군",
+      "진도군",
+      "함평군",
+      "해남군",
+      "화순군",
+    ],
+    dongmyun: {
+      순천시: ["해룡면", "서면", "황전면", "월등면", "주암면"],
+    },
+  },
+  경상북도: {
+    sigungu: [
+      "경산시",
+      "경주시",
+      "구미시",
+      "김천시",
+      "문경시",
+      "상주시",
+      "안동시",
+      "영주시",
+      "영천시",
+      "포항시",
+      "고령군",
+      "군위군",
+      "봉화군",
+      "성주군",
+      "영덕군",
+      "영양군",
+      "예천군",
+      "울릉군",
+      "울진군",
+      "의성군",
+      "청도군",
+      "청송군",
+      "칠곡군",
+    ],
+    dongmyun: {
+      포항시: ["남구", "북구"],
+    },
+  },
+  경상남도: {
+    sigungu: [
+      "거제시",
+      "김해시",
+      "밀양시",
+      "사천시",
+      "양산시",
+      "진주시",
+      "창원시",
+      "통영시",
+      "거창군",
+      "고성군",
+      "남해군",
+      "산청군",
+      "의령군",
+      "창녕군",
+      "하동군",
+      "함안군",
+      "함양군",
+      "합천군",
+    ],
+    dongmyun: {
+      창원시: ["의창구", "성산구", "마산합포구", "마산회원구", "진해구"],
+    },
+  },
+  제주특별자치도: {
+    sigungu: ["제주시", "서귀포시"],
+    dongmyun: {
+      제주시: ["건입동", "노형동", "도남동", "삼도동", "용담동", "이도동"],
+      서귀포시: ["대정읍", "남원읍", "성산읍", "안덕면", "표선면"],
+    },
+  },
+  세종특별자치시: {
+    sigungu: ["세종시"],
+    dongmyun: {
+      세종시: [
+        "고운동",
+        "나성동",
+        "다정동",
+        "도담동",
+        "반곡동",
+        "보람동",
+        "새롬동",
+        "소담동",
+        "아름동",
+        "종촌동",
+        "한솔동",
+      ],
+    },
+  },
+};
+
+// 시도 목록
+const sidoList = Object.keys(koreaRegions);
+
+/**
+ * 랜덤 시도 생성
+ * @returns {string} 랜덤 시도명
+ */
+function generateRandomSido(): keyof typeof koreaRegions {
+  return sidoList[
+    Math.floor(Math.random() * sidoList.length)
+  ] as keyof typeof koreaRegions;
+}
+
+/**
+ * 특정 시도의 랜덤 시군구 생성
+ * @param {string} sido 시도명
+ * @returns {string} 랜덤 시군구명
+ */
+function generateRandomSigungu(sido: keyof typeof koreaRegions): string {
+  if (!koreaRegions[sido]) return "중구"; // 기본값
+
+  const sigunguList = koreaRegions[sido].sigungu;
+  return sigunguList[Math.floor(Math.random() * sigunguList.length)];
+}
+
+/**
+ * 특정 시도와 시군구의 랜덤 동/읍/면 생성
+ * @param {string} sido 시도명
+ * @param {string} sigungu 시군구명
+ * @returns {string} 랜덤 동/읍/면명
+ */
+function generateRandomDongmyun(sido: string, sigungu: string): string {
+  const typedsido = sido as keyof typeof koreaRegions;
+  const typedSigungu = sigungu as keyof typeof koreaRegion.dongmyun;
+  const koreaRegion = koreaRegions[typedsido];
+
+  if (!koreaRegion || !koreaRegion.dongmyun[typedSigungu]) {
+    // 해당 시군구의 동/읍/면 정보가 없으면 기본 동명 반환
+    return `${Math.floor(Math.random() * 10) + 1}동`;
+  }
+
+  const dongmyunList: (keyof typeof koreaRegion)[keyof typeof koreaRegion.dongmyun] =
+    koreaRegion.dongmyun[typedSigungu];
+  return dongmyunList[Math.floor(Math.random() * dongmyunList.length)];
+}
+
+/**
+ * 랜덤 행정구역 정보 생성 함수
+ * @returns {Object} 시도, 시군구, 동/읍/면 정보
+ */
+function generateRandomAddress(): {
+  sido: string;
+  sigungu: string;
+  dongmyun: string;
+} {
+  const sido = generateRandomSido();
+  const sigungu = generateRandomSigungu(sido);
+  const dongmyun = generateRandomDongmyun(sido, sigungu);
+
+  return {
+    sido,
+    sigungu,
+    dongmyun,
+  };
+}
+
+// Mock 데이터 유틸리티에 추가할 수 있는 함수
+export namespace MockUtil {
+  export namespace ILocation {
+    /**
+     * 랜덤 한국 행정구역 정보 생성
+     * @returns {Object} 시도, 시군구, 동/읍/면 정보
+     */
+    export function generateRandomKoreanAddress(): {
+      sido: string;
+      sigungu: string;
+      dongmyun: string;
+    } {
+      return generateRandomAddress();
+    }
+
+    /**
+     * 여러 개의 랜덤 행정구역 정보 생성
+     * @param {number} count 생성할 개수
+     * @returns {Array} 행정구역 정보 배열
+     */
+    export function generateMultipleAddresses(
+      count: number,
+    ): Array<{ sido: string; sigungu: string; dongmyun: string }> {
+      const addresses = [];
+      for (let i = 0; i < count; i++) {
+        addresses.push(generateRandomAddress());
+      }
+      return addresses;
+    }
+
+    /**
+     * 특정 시도 내의 랜덤 행정구역 정보 생성
+     * @param {string} sido 시도명
+     * @returns {Object} 시도, 시군구, 동/읍/면 정보
+     */
+    export function generateAddressInSido(sido: keyof typeof koreaRegions): {
+      sido: string;
+      sigungu: string;
+      dongmyun: string;
+    } {
+      if (!koreaRegions[sido]) {
+        return generateRandomAddress(); // 해당 시도가 없으면 랜덤 주소 반환
+      }
+
+      const sigungu = generateRandomSigungu(sido);
+      const dongmyun = generateRandomDongmyun(sido, sigungu);
+
+      return {
+        sido,
+        sigungu,
+        dongmyun,
+      };
+    }
+
+    /**
+     * 주요 도시 목록 반환 (대도시 중심)
+     * @returns {Array} 주요 도시 목록
+     */
+    export function getMajorCities(): Array<{ sido: string; sigungu: string }> {
+      return [
+        { sido: "서울특별시", sigungu: "강남구" },
+        { sido: "서울특별시", sigungu: "서초구" },
+        { sido: "서울특별시", sigungu: "송파구" },
+        { sido: "서울특별시", sigungu: "마포구" },
+        { sido: "부산광역시", sigungu: "해운대구" },
+        { sido: "부산광역시", sigungu: "부산진구" },
+        { sido: "인천광역시", sigungu: "연수구" },
+        { sido: "대구광역시", sigungu: "수성구" },
+        { sido: "대전광역시", sigungu: "유성구" },
+        { sido: "광주광역시", sigungu: "서구" },
+        { sido: "경기도", sigungu: "성남시" },
+        { sido: "경기도", sigungu: "수원시" },
+        { sido: "경기도", sigungu: "용인시" },
+        { sido: "제주특별자치도", sigungu: "제주시" },
+      ];
+    }
+
+    /**
+     * 행정구역 전체 데이터 가져오기
+     * @returns {Object} 전체 행정구역 데이터
+     */
+    export function getFullRegionData() {
+      return koreaRegions;
+    }
+  }
+}
+
+// 사용 예시:
+// const randomAddress = MockUtil.ILocation.generateRandomKoreanAddress();
+// console.log(`${randomAddress.sido} ${randomAddress.sigungu} ${randomAddress.dongmyun}`);
+//
+// // 10개의 랜덤 주소 생성
+// const addresses = MockUtil.ILocation.generateMultipleAddresses(10);
+//
+// // 서울 내의 랜덤 주소 생성
+// const seoulAddress = MockUtil.ILocation.generateAddressInSido("서울특별시");
