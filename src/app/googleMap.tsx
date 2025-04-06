@@ -95,10 +95,10 @@ export default function GoogleMapComponent({
             key={marker.id}
             position={{ lat: marker.lat, lng: marker.lng }}
             onClick={() => setSelectedMarker(marker)}
-            icon={{
-              url: marker.profileUrl,
-              scaledSize: new window.google.maps.Size(40, 40),
-            }}
+            // icon={{
+            //   url: marker.profileUrl,
+            //   scaledSize: new window.google.maps.Size(40, 40),
+            // }}
           >
             <div>{renderCustomMarker(marker)}</div>
           </Marker>
