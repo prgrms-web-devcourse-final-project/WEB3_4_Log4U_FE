@@ -27,7 +27,7 @@ export default function RootLayout({
 
   useEffect(() => {
     axiosInstance
-      .get("/me")
+      .get("users/me")
       .then((response) => {
         if (response.status !== 200) {
           router.push("/login");
