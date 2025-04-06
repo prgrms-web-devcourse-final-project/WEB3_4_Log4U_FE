@@ -15,7 +15,7 @@ function MyDiaries(diaries: Diary.Detail[]) {
       {diaries.length > 0
         ? diaries.slice(0, 9).map((diary) => (
             <Link
-              href={`/diary/${diary.diaryId}`}
+              href={`/diaries/${diary.diaryId}`}
               key={diary.diaryId}
               className="border rounded overflow-hidden aspect-square flex flex-col h-[250px]"
             >
