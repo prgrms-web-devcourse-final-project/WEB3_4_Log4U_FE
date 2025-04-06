@@ -9,6 +9,7 @@ import { UserService } from "@root/services/user";
 import { Comment } from "@root/types/comment";
 import { User } from "@root/types/user";
 import { ImageUtil } from "@root/utils/image.util";
+import { MockUtil } from "@root/utils/mock.util";
 
 export default function DiaryPage() {
   const router = useRouter();
@@ -104,7 +105,8 @@ export default function DiaryPage() {
     const fetchDiary = async () => {
       setIsLoading(true);
       try {
-        const diary = await DiaryService.getDiary(diaryId);
+        // const diary = await DiaryService.getDiary(diaryId);
+        const [diary] = MockUtil.IDiary.Details(1);
         setDiary(diary);
 
         // 현재 사용자 정보 가져오기
