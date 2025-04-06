@@ -200,15 +200,13 @@ export default function SearchPage() {
         <div className="mt-4 relative rounded-lg overflow-hidden h-64">
           {/* 구글 맵 컴포넌트 */}
           <GoogleMapComponent
-            markers={[
-              {
-                id: 1,
-                lat: 37.5665,
-                lng: 126.978,
-                profileUrl: "/api/placeholder/60/60",
-                count: 9,
-              },
-            ]}
+            markers={diaries.map((diary) => ({
+              id: diary.diaryId,
+              lat: diary.latitude,
+              lng: diary.longitude,
+              profileUrl: diary.thumbnailUrl,
+              // count: 9,
+            }))}
           />
         </div>
 

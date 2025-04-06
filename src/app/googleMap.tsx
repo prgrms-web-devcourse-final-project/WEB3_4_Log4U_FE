@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 interface MapMarker {
@@ -31,10 +31,19 @@ export default function GoogleMapComponent({
   };
 
   // 기본 센터 위치 (서울)
-  const center = {
+  const [center, setCenter] = useState({
     lat: 37.5665,
     lng: 126.978,
-  };
+  });
+
+  useEffect(() => {
+    window.navigator.geolocation.getCurrentPosition((position) => {
+      setCenter({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    });
+  }, []);
 
   // 커스텀 마커 렌더링
   const renderCustomMarker = (marker: MapMarker) => (
@@ -63,6 +72,7 @@ export default function GoogleMapComponent({
       </div>
     );
 
+  console.log(markers, "markers");
   return (
     <GoogleMap
       mapContainerStyle={mapContainerStyle}
@@ -86,12 +96,8 @@ export default function GoogleMapComponent({
           position={{ lat: marker.lat, lng: marker.lng }}
           onClick={() => setSelectedMarker(marker)}
           icon={{
-            url:
-              "data:image/svg+xml;charset=UTF-8," +
-              encodeURIComponent(
-                '<svg width="1" height="1" xmlns="http://www.w3.org/2000/svg"></svg>',
-              ),
-            scaledSize: new window.google.maps.Size(0, 0),
+            url: marker.profileUrl,
+            scaledSize: new window.google.maps.Size(40, 40),
           }}
         >
           <div>{renderCustomMarker(marker)}</div>
