@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import GoogleMapComponent from "@/app/googleMap";
 import { DiaryService } from "@root/services/diary";
 import { MockUtil } from "@root/utils/mock.util";
 import { Diary } from "@root/types/diary";
+import Link from "next/link";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -68,7 +68,7 @@ export default function SearchPage() {
   };
 
   // 페이지네이션 렌더링 함수
-  const renderPagination = () => {
+  function renderPagination() {
     const pages = [];
     const maxVisiblePages = 5;
     let startPage = Math.max(1, currentPage - 2);
@@ -120,7 +120,7 @@ export default function SearchPage() {
     );
 
     return pages;
-  };
+  }
 
   return (
     <div className="flex">
