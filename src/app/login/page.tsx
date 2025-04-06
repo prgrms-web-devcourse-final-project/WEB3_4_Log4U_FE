@@ -5,7 +5,7 @@ import { FC } from "react";
 type SSOProviderType = "naver" | "kakao" | "google";
 
 function SSOAuth(provider: "naver" | "kakao" | "google") {
-  return `/oauth2/authorization/${provider}`;
+  return `oauth2/authorization/${provider}`;
 }
 
 const LoginPage: FC = () => {
