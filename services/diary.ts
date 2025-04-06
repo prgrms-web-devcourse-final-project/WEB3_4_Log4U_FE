@@ -5,6 +5,7 @@ import { Diary } from "../types/diary";
 export class DiaryService {
   private static CREATE_DIARY_API = "/diaries";
   private static UPDATE_DIARY_API = (id: number) => `/diaries/${id}`;
+  private static DELETE_DIARY_API = (id: number) => `/diaries/${id}`;
   private static GET_DIARY_LIST_API = "/diaries";
   private static GET_DIARY_DETAIL_API = (id: number) => `/diaries/${id}`;
 
@@ -44,6 +45,18 @@ export class DiaryService {
       return data;
     } catch (error) {
       console.error("Error fetching diary:", error);
+      throw error; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
+    }
+  }
+
+  static async deleteDiary(diaryId: string) {
+    try {
+      await axiosInstance.request<Diary.Detail>({
+        url: this.DELETE_DIARY_API(parseInt(diaryId)),
+        method: "GET",
+      });
+    } catch (error) {
+      console.error("Error deleting diary:", error);
       throw error; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
     }
   }
