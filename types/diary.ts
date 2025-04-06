@@ -8,21 +8,27 @@ export namespace Diary {
       value as Diary.WeatherType,
     );
   }
-
   export const WeatherType = {
     SUNNY: "SUNNY",
     CLOUDY: "CLOUDY",
     RAINY: "RAINY",
     SNOWY: "SNOWY",
   } as const;
-  export type WeatherType = (typeof WeatherType)[keyof typeof WeatherType];
 
+  export type WeatherType = (typeof WeatherType)[keyof typeof WeatherType];
   export const Visibility = {
     PUBLIC: "PUBLIC",
     PRIVATE: "PRIVATE",
     FOLLOWER: "FOLLOWER",
   } as const;
+
   export type Visibility = (typeof Visibility)[keyof typeof Visibility];
+  export const SortType = {
+    LATEST: "latest",
+    LIKE: "like",
+  } as const;
+
+  export type SortType = (typeof SortType)[keyof typeof SortType];
 
   export interface DiaryMedia {
     mediaId: number; // Long
@@ -38,7 +44,7 @@ export namespace Diary {
     orderIndex: number; // Integer
   }
 
-  export interface Detail {
+  export interface Common {
     diaryId: number;
 
     userId: number;
@@ -63,8 +69,18 @@ export namespace Diary {
 
     likeCount: number;
 
+    sido: string; // 시/도 (서울특별시, 경기도 등)
+
+    sigungu: string; // 시/군/구 (강남구, 성남시 등)
+
+    dongmyun: string; // 읍/면/동 (역삼동, 수서동 등)
+
     mediaList: DiaryMedia[];
   }
+
+  export interface Detail extends Common {}
+
+  export interface Summary extends Common {}
 
   export interface CreateDto
     extends Pick<
@@ -80,6 +96,4 @@ export namespace Diary {
     > {}
 
   export interface UpdateDto extends CreateDto {}
-
-  export interface Summary {}
 }
