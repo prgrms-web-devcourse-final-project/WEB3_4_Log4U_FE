@@ -29,7 +29,7 @@ export function LeftSideBar() {
         </div>
         <div className="flex items-center mb-2">
           <Image src="/search.png" alt="search image" width={50} height={50} />
-          <Link href="/search">
+          <Link href="/diaries/search">
             <span className="p-5 text-2xl font-bold">검색</span>
           </Link>
         </div>
@@ -40,7 +40,7 @@ export function LeftSideBar() {
             width={50}
             height={50}
           />
-          <Link href="/add-diary">
+          <Link href="/diaries/new">
             <span className="p-5 text-2xl font-bold">만들기</span>
           </Link>
         </div>
