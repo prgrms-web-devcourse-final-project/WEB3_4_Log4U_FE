@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import { UserService } from '@root/services/user';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 
 interface SideBarProps {
   children: React.ReactNode;
@@ -49,7 +51,10 @@ export function LeftSideBar() {
     </SideBar>
   );
 }
+
 export function RightSideBar() {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const router = useRouter();
   const hotUsers = [
     'winter',
     'winter',
@@ -67,12 +72,34 @@ export function RightSideBar() {
     'winter',
     'winter',
   ];
+
+  const handleLogout = async () => {
+    try {
+      await UserService.logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('로그아웃 실패:', error);
+    }
+  };
+
   return (
     <SideBar>
       <div className='grow-1'>
-        <div className='flex items-center'>
-          <Image src={'/test-profile.png'} alt={'profile image'} width={50} height={50} />
-          <span className='p-5 text-2xl font-bold'>test user</span>
+        <div className='flex items-center relative'>
+          <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className='flex items-center'>
+            <Image src={'/test-profile.png'} alt={'profile image'} width={50} height={50} />
+            <span className='p-5 text-2xl font-bold'>test user</span>
+          </button>
+          {isDropdownOpen && (
+            <div className='absolute top-full left-0 mt-2 bg-white rounded-md shadow-lg'>
+              <button
+                onClick={handleLogout}
+                className='block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
+              >
+                로그아웃
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <div className='flex items-center'>
