@@ -1,11 +1,11 @@
 "use client";
 
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
 import { LeftSideBar, RightSideBar } from "@/ui/SideBar";
+import { Geist, Geist_Mono } from "next/font/google";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { axiosInstance } from "../../services/axios.instance";
-import { usePathname, useRouter } from "next/navigation";
+import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
