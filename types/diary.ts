@@ -4,35 +4,33 @@ export namespace Diary {
   }
 
   export function isWeatherType(value: string): value is Diary.WeatherType {
-    return Object.values(Diary.WeatherType).includes(
-      value as Diary.WeatherType,
-    );
+    return Object.values(Diary.WeatherType).includes(value as Diary.WeatherType);
   }
   export const WeatherType = {
-    SUNNY: "SUNNY",
-    CLOUDY: "CLOUDY",
-    RAINY: "RAINY",
-    SNOWY: "SNOWY",
+    SUNNY: 'SUNNY',
+    CLOUDY: 'CLOUDY',
+    RAINY: 'RAINY',
+    SNOWY: 'SNOWY',
   } as const;
 
   export const WeatherMap = {
-    [WeatherType.SUNNY]: "☀️ 맑음",
-    [WeatherType.CLOUDY]: "☁️ 흐림",
-    [WeatherType.RAINY]: "🌧️ 비",
-    [WeatherType.SNOWY]: "❄️ 눈",
+    [WeatherType.SUNNY]: '☀️ 맑음',
+    [WeatherType.CLOUDY]: '☁️ 흐림',
+    [WeatherType.RAINY]: '🌧️ 비',
+    [WeatherType.SNOWY]: '❄️ 눈',
   } as const;
 
   export type WeatherType = (typeof WeatherType)[keyof typeof WeatherType];
   export const Visibility = {
-    PUBLIC: "PUBLIC",
-    PRIVATE: "PRIVATE",
-    FOLLOWER: "FOLLOWER",
+    PUBLIC: 'PUBLIC',
+    PRIVATE: 'PRIVATE',
+    FOLLOWER: 'FOLLOWER',
   } as const;
 
   export type Visibility = (typeof Visibility)[keyof typeof Visibility];
   export const SortType = {
-    LATEST: "latest",
-    LIKE: "like",
+    LATEST: 'latest',
+    LIKE: 'like',
   } as const;
 
   export type SortType = (typeof SortType)[keyof typeof SortType];
@@ -92,14 +90,14 @@ export namespace Diary {
   export interface CreateDto
     extends Pick<
       Diary.Detail,
-      | "latitude"
-      | "longitude"
-      | "title"
-      | "content"
-      | "weatherInfo"
-      | "visibility"
-      | "thumbnailUrl"
-      | "mediaList"
+      | 'latitude'
+      | 'longitude'
+      | 'title'
+      | 'content'
+      | 'weatherInfo'
+      | 'visibility'
+      | 'thumbnailUrl'
+      | 'mediaList'
     > {}
 
   export interface UpdateDto extends CreateDto {}
