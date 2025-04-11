@@ -1,86 +1,79 @@
-import Image from "next/image";
-import GoogleMap from "@/app/googleMap";
-import { Pagination } from "@/ui/pagination";
+import Image from 'next/image';
+import GoogleMap from '@/app/googleMap';
+import { Pagination } from '@/ui/pagination';
 
 const diaries = [
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
   {
-    thumbnailUrl: "/diary-thumbnail-test.png",
-    name: "mydiary",
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
     likeCount: 222,
-    authorName: "winter",
+    authorName: 'winter',
   },
 ];
 
 function Profile() {
   return (
-    <div className="flex item-center my-15 grow-1">
-      <Image
-        src={"/test-profile.png"}
-        alt={"profile-image"}
-        width={100}
-        height={100}
-      />
-      <div className={"ml-4 flex flex-col justify-center"}>
-        <p className="text-2xl">{"winter"}</p>
-        <div className="flex">
-          <span className={"grow-2 pr-3"}>게시물 {167}</span>
-          <span className={"grow-2 pr-3"}>팔로워 {167}</span>
-          <span className={"grow-2 pr-3"}>팔로잉 {167}</span>
-          <button
-            className={"grow-3 bg-primary text-white text-xs rounded-xl w-40"}
-          >
-            {true ? "팔로우" : "언팔로우"}
+    <div className='flex item-center my-15 grow-1'>
+      <Image src={'/test-profile.png'} alt={'profile-image'} width={100} height={100} />
+      <div className={'ml-4 flex flex-col justify-center'}>
+        <p className='text-2xl'>{'winter'}</p>
+        <div className='flex'>
+          <span className={'grow-2 pr-3'}>게시물 {167}</span>
+          <span className={'grow-2 pr-3'}>팔로워 {167}</span>
+          <span className={'grow-2 pr-3'}>팔로잉 {167}</span>
+          <button className={'grow-3 bg-primary text-white text-xs rounded-xl w-40'}>
+            {true ? '팔로우' : '언팔로우'}
           </button>
         </div>
-        <p className={"text-xs"}>{"여행 좋아하는 윈터"}</p>
+        <p className={'text-xs'}>{'여행 좋아하는 윈터'}</p>
       </div>
     </div>
   );
@@ -88,17 +81,12 @@ function Profile() {
 
 function Diaries() {
   return (
-    <div className="grow-1">
-      <div className="grid grid-cols-3 grid-rows-3 gap-4">
+    <div className='grow-1'>
+      <div className='grid grid-cols-3 grid-rows-3 gap-4'>
         {diaries.map((diary, index) => (
-          <div key={index} className="">
-            <Image
-              src={diary.thumbnailUrl}
-              alt={"diary-thumbnail"}
-              width={100}
-              height={100}
-            />
-            <div className="flex justify-between">
+          <div key={index} className=''>
+            <Image src={diary.thumbnailUrl} alt={'diary-thumbnail'} width={100} height={100} />
+            <div className='flex justify-between'>
               <span>{diary.name}</span>
               <span>{diary.likeCount}</span>
             </div>
@@ -113,7 +101,7 @@ function Diaries() {
 
 export function MainContent() {
   return (
-    <div className="max-w-[700px] mx-[280px] flex flex-col justify-items-center content-start">
+    <div className='max-w-[700px] mx-[280px] flex flex-col justify-items-center content-start'>
       <Profile></Profile>
       <GoogleMap></GoogleMap>
       <Diaries></Diaries>

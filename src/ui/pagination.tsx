@@ -7,17 +7,17 @@ export function getPageNumber() {
 export function Pages() {
   const pages = Array.from({ length: getPageNumber() }).map((_, index) => {
     return (
-      <button key={index + 1} className={"mx-2"}>
+      <button key={index + 1} className={'mx-2'}>
         {index + 1}
       </button>
     );
   });
   return (
-    <div className="flex justify-center">
+    <div className='flex justify-center'>
       {pages.length > 6
         ? [
             ...pages.slice(0, 3),
-            <p key={-1} className={"mx-2"}>
+            <p key={-1} className={'mx-2'}>
               ...
             </p>,
             ...pages.slice(-2),
@@ -29,7 +29,7 @@ export function Pages() {
 
 export function Pagination() {
   return (
-    <div className={"flex justify-center font-bold"}>
+    <div className={'flex justify-center font-bold'}>
       <button>← Previous</button>
       <Pages></Pages>
       <button>Next →</button>
