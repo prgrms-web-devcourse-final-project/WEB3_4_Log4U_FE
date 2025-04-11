@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import Script from "next/script";
+import { useEffect, useRef, useState } from 'react';
+import Script from 'next/script';
 
 export default function GoogleMap() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -24,18 +24,18 @@ export default function GoogleMap() {
   }, [mapLoaded]);
 
   return (
-    <div className={"my-15 grow-1"}>
+    <div className={'my-15 grow-1'}>
       {/* Google Maps API 스크립트 로드 */}
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY}&callback=initMap`}
-        strategy="lazyOnload"
+        strategy='lazyOnload'
         onLoad={() => {
           // window에 initMap을 노출해서 스크립트 콜백으로 사용할 수 있게 함
           (window as any).initMap = initMap;
           setMapLoaded(true);
         }}
       />
-      <div ref={mapRef} className="w-xl h-[400px]" />
+      <div ref={mapRef} className='w-xl h-[400px]' />
     </div>
   );
 }

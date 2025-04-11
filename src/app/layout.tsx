@@ -2,19 +2,19 @@
 
 import { LeftSideBar, RightSideBar } from "@/ui/SideBar";
 import { Geist, Geist_Mono } from "next/font/google";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";∑
 import { useEffect } from "react";
 import { axiosInstance } from "../../services/axios.instance";
-import "./globals.css";
+import './globals.css';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export default function RootLayout({
