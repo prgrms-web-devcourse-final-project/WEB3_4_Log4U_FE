@@ -30,7 +30,11 @@ export default function RootLayout({
       .get("users/me")
       .then((response) => {
         if (response.status !== 200) {
-          router.push("/login");
+          axiosInstance.get("/oauth2/token/reissue").then((response) => {
+            if (response.status !== 200) {
+              router.push("/login");
+            }
+          });
         }
       })
       .catch((_error) => {
