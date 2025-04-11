@@ -28,16 +28,16 @@ export default function RootLayout({
   useEffect(() => {
     axiosInstance
       .get('users/me')
-      .then((response) => {
+      .then(response => {
         if (response.status !== 200) {
-          axiosInstance.get('/oauth2/token/reissue').then((response) => {
+          axiosInstance.get('/oauth2/token/reissue').then(response => {
             if (response.status !== 200) {
               router.push('/login');
             }
           });
         }
       })
-      .catch((_error) => {
+      .catch(_error => {
         router.push('/login');
       });
   }, []);
