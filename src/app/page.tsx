@@ -1,32 +1,90 @@
 // app/diary/map/[id]/page.tsx
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { MockUtil } from "@root/utils/mock.util";
-import GoogleMapComponent from "@/app/googleMap";
-import { User } from "@root/types/user";
-import { Diary } from "@root/types/diary";
+import GoogleMapComponent from '@/app/googleMap';
+import { Diary } from '@root/types/diary';
+import { User } from '@root/types/user';
+import { MockUtil } from '@root/utils/mock.util';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+const diaries = [
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+  {
+    thumbnailUrl: '/diary-thumbnail-test.png',
+    name: 'mydiary',
+    likeCount: 222,
+    authorName: 'winter',
+  },
+];
 
 function MyDiaries(diaries: Diary.Detail[]) {
   return (
-    <div className="mt-6 grid grid-cols-3 gap-4">
+    <div className='mt-6 grid grid-cols-3 gap-4'>
       {diaries.length > 0
-        ? diaries.slice(0, 9).map((diary) => (
+        ? diaries.slice(0, 9).map(diary => (
             <Link
               href={`/diaries/${diary.diaryId}`}
               key={diary.diaryId}
-              className="block border rounded-lg overflow-hidden hover:shadow-md transition"
+              className='block border rounded-lg overflow-hidden hover:shadow-md transition'
             >
-              <div className="h-40 bg-gray-200 relative">
-                <img
-                  src={diary.thumbnailUrl || "/api/placeholder/300/200"}
-                  alt="다이어리 이미지"
-                  className="w-full h-full object-cover"
+              <div className='h-40 bg-gray-200 relative'>
+                <Image
+                  src={diary.thumbnailUrl || '/api/placeholder/300/200'}
+                  alt='다이어리 이미지'
+                  className='w-full h-full object-cover'
                 />
               </div>
-              <div className="p-3 text-sm text-center text-gray-700">
+              <div className='p-3 text-sm text-center text-gray-700'>
                 <div>다이어리 여행,</div>
                 <div>
                   {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
@@ -38,10 +96,10 @@ function MyDiaries(diaries: Diary.Detail[]) {
           Array.from({ length: 9 }).map((_, index) => (
             <div
               key={`empty-${index}`}
-              className="border rounded overflow-hidden aspect-square flex flex-col h-[250px]"
+              className='border rounded overflow-hidden aspect-square flex flex-col h-[250px]'
             >
-              <div className="w-full flex-1 bg-gray-100"></div>
-              <div className="p-2 text-center text-sm text-gray-300 h-16 flex flex-col justify-center">
+              <div className='w-full flex-1 bg-gray-100'></div>
+              <div className='p-2 text-center text-sm text-gray-300 h-16 flex flex-col justify-center'>
                 <p>다이어리 없음</p>
               </div>
             </div>
@@ -71,7 +129,7 @@ export default function HomePage({ params }: { params: { id: string } }) {
         setDiaries(user.list);
         setTotalPages(8);
       } catch (error) {
-        console.error("데이터 로딩 중 오류 발생:", error);
+        console.error('데이터 로딩 중 오류 발생:', error);
       } finally {
         setIsLoading(false);
       }
@@ -96,13 +154,13 @@ export default function HomePage({ params }: { params: { id: string } }) {
     // 이전 버튼
     pages.push(
       <button
-        key="prev"
+        key='prev'
         onClick={() => handlePageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-1 text-sm text-gray-600"
+        className='px-3 py-1 text-sm text-gray-600'
       >
         ◀ Previous
-      </button>,
+      </button>
     );
 
     // 페이지 번호들
@@ -112,50 +170,46 @@ export default function HomePage({ params }: { params: { id: string } }) {
           key={i}
           onClick={() => handlePageChange(i)}
           className={`w-8 h-8 mx-1 rounded-full ${
-            i === currentPage ? "bg-gray-800 text-white" : "text-gray-600"
+            i === currentPage ? 'bg-gray-800 text-white' : 'text-gray-600'
           }`}
         >
           {i}
-        </button>,
+        </button>
       );
     }
 
     // 다음 버튼
     pages.push(
       <button
-        key="next"
+        key='next'
         onClick={() => handlePageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-3 py-1 text-sm text-gray-600"
+        className='px-3 py-1 text-sm text-gray-600'
       >
         Next ▶
-      </button>,
+      </button>
     );
 
-    return (
-      <div className="flex items-center justify-center space-x-1 mt-4">
-        {pages}
-      </div>
-    );
+    return <div className='flex items-center justify-center space-x-1 mt-4'>{pages}</div>;
   };
 
   return (
-    <div className="flex p-4">
-      <div className="flex-1 flex flex-col overflow-auto">
+    <div className='flex p-4'>
+      <div className='flex-1 flex flex-col overflow-auto'>
         {/* 사용자 프로필 정보 */}
-        <div className="p-6 border-b">
-          <div className="flex items-center">
-            <div className="w-20 h-20 rounded-full border overflow-hidden mr-6">
-              <img
-                src={user?.profileImage}
-                alt="프로필 이미지"
-                className="w-full h-full object-cover"
+        <div className='p-6 border-b'>
+          <div className='flex items-center'>
+            <div className='w-20 h-20 rounded-full border overflow-hidden mr-6'>
+              <Image
+                src={user?.profileImage || '/api/placeholder/300/200'}
+                alt='프로필 이미지'
+                className='w-full h-full object-cover'
               />
             </div>
 
             <div>
-              <h1 className="text-xl font-bold mb-2">winter</h1>
-              <div className="flex space-x-4 text-sm">
+              <h1 className='text-xl font-bold mb-2'>winter</h1>
+              <div className='flex space-x-4 text-sm'>
                 <div>게시물 {user?.diaryCount || 0}</div>
                 <div>팔로워 {user?.followers || 0}</div>
                 <div>팔로잉 {user?.followings || 0}</div>
@@ -165,14 +219,14 @@ export default function HomePage({ params }: { params: { id: string } }) {
         </div>
 
         {/* 다이어리 지도 제목 */}
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-bold">다이어리 지도 - 경로 시각화</h2>
+        <div className='px-6 py-4 border-b'>
+          <h2 className='text-xl font-bold'>다이어리 지도 - 경로 시각화</h2>
         </div>
 
         {/* 구글 맵 */}
         <GoogleMapComponent
           markers={
-            user?.list.map((diary) => ({
+            user?.list.map(diary => ({
               id: diary.diaryId,
               lat: diary.latitude,
               lng: diary.longitude,
@@ -183,8 +237,8 @@ export default function HomePage({ params }: { params: { id: string } }) {
         ></GoogleMapComponent>
 
         {/* 공개된 다이어리 섹션 */}
-        <div className="px-6 py-4">
-          <h3 className="text-lg font-bold mb-4">공개된 다이어리</h3>
+        <div className='px-6 py-4'>
+          <h3 className='text-lg font-bold mb-4'>공개된 다이어리</h3>
 
           {/* 다이어리 그리드 */}
           {MyDiaries(diaries)}
