@@ -110,7 +110,8 @@ function randomProfileImage(): string {
     '19',
     '20',
   ];
-  return `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'women' : 'men'}/${imageIds[Math.floor(Math.random() * imageIds.length)]}.jpg`;
+  // return `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'women' : 'men'}/${imageIds[Math.floor(Math.random() * imageIds.length)]}.jpg`;
+  return '';
 }
 
 // 랜덤 이미지 URL 생성

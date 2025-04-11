@@ -52,7 +52,13 @@ export default function GoogleMapComponent({ markers }: { markers: MapMarker[] }
               {marker.count}
             </span>
           )}
-          <Image src={marker.profileUrl} alt='프로필' className='w-full h-full object-cover' />
+          {/* <Image
+            src={marker.profileUrl}
+            alt='프로필'
+            width={64}
+            height={64}
+            className='w-full h-full object-cover'
+          /> */}
         </div>
       </div>
     </div>

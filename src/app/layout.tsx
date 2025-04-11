@@ -1,4 +1,4 @@
-('use client');
+'use client';
 
 import { LeftSideBar, RightSideBar } from '@/ui/SideBar';
 import { Geist, Geist_Mono } from 'next/font/google';

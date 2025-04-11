@@ -1,4 +1,3 @@
-// app/diary/map/[id]/page.tsx
 'use client';
 
 import GoogleMapComponent from '@/app/googleMap';
@@ -78,11 +77,13 @@ function MyDiaries(diaries: Diary.Detail[]) {
               className='block border rounded-lg overflow-hidden hover:shadow-md transition'
             >
               <div className='h-40 bg-gray-200 relative'>
-                <Image
-                  src={diary.thumbnailUrl || '/api/placeholder/300/200'}
+                {/* <Image
+                  src={diary.thumbnailUrl}
                   alt='다이어리 이미지'
                   className='w-full h-full object-cover'
-                />
+                  width={300}
+                  height={200}
+                /> */}
               </div>
               <div className='p-3 text-sm text-center text-gray-700'>
                 <div>다이어리 여행,</div>
@@ -200,11 +201,14 @@ export default function HomePage({ params }: { params: { id: string } }) {
         <div className='p-6 border-b'>
           <div className='flex items-center'>
             <div className='w-20 h-20 rounded-full border overflow-hidden mr-6'>
-              <Image
-                src={user?.profileImage || '/api/placeholder/300/200'}
+              {/* <Image
+                src={user?.profileImage ?? '/public/test-profile.png'}
                 alt='프로필 이미지'
+                width={80}
+                height={80}
                 className='w-full h-full object-cover'
-              />
+                priority
+              /> */}
             </div>
 
             <div>
