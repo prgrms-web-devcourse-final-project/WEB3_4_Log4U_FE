@@ -10,6 +10,8 @@ import { Comment } from '@root/types/comment';
 import { User } from '@root/types/user';
 import { CommentService } from '@root/services/comments';
 import { LikeService } from '@root/services/like';
+import { ReportService } from '@root/services/report';
+import { Report } from '@root/types/report';
 
 export default function DiaryPage() {
   const router = useRouter();
@@ -25,6 +27,12 @@ export default function DiaryPage() {
   const [error, setError] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [comments, setComments] = useState<Comment.Summary[]>([]);
+
+  // 신고 모달 관련 상태
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [reportType, setReportType] = useState<Report.Type>(Report.Type.INAPPROPRIATE_CONTENT);
+  const [reportContent, setReportContent] = useState<string>('');
+  const reportModalRef = useRef<HTMLDivElement>(null);
 
   // 무한 스크롤을 위한 상태 추가
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -157,14 +165,28 @@ export default function DiaryPage() {
   };
 
   // 신고 핸들러
-  const handleReport = async () => {
-    if (!confirm('이 다이어리를 신고하시겠습니까?')) return;
+  const handleReport = () => {
+    setShowReportModal(true);
+  };
+
+  // 신고 제출
+  const handleSubmitReport = async () => {
+    if (!reportType) {
+      alert('신고 이유를 선택해주세요.');
+      return;
+    }
 
     setIsActionLoading(true);
 
     try {
-      // @todo: 신고 API 호출
+      const reportData: Report.CreateDto = {
+        reportType: reportType,
+        content: reportContent,
+      };
+
+      await ReportService.reportDiary(diaryId, reportData);
       alert('신고가 접수되었습니다.');
+      handleCloseReportModal();
     } catch (err) {
       console.error('다이어리 신고 중 오류 발생:', err);
       setError('다이어리를 신고하는 중 오류가 발생했습니다.');
@@ -172,6 +194,30 @@ export default function DiaryPage() {
       setIsActionLoading(false);
     }
   };
+
+  // 신고 모달 닫기
+  const handleCloseReportModal = () => {
+    setShowReportModal(false);
+    setReportType(Report.Type.INAPPROPRIATE_CONTENT);
+    setReportContent('');
+  };
+
+  // 모달 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (reportModalRef.current && !reportModalRef.current.contains(event.target as Node)) {
+        handleCloseReportModal();
+      }
+    };
+
+    if (showReportModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showReportModal]);
 
   // 댓글 제출 핸들러
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -555,6 +601,58 @@ export default function DiaryPage() {
           </form>
         </div>
       </div>
+
+      {/* 신고 모달 */}
+      {showReportModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50'>
+          <div ref={reportModalRef} className='bg-white rounded-lg w-96 p-6 shadow-xl'>
+            <div className='text-xl font-semibold mb-4'>신고하기</div>
+
+            <div className='mb-4'>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>신고 이유</label>
+              <select
+                className='w-full border border-gray-300 rounded-md p-2'
+                value={reportType}
+                onChange={e => setReportType(e.target.value as Report.Type)}
+              >
+                {Object.entries(Report.TypeLabel).map(([type, label]) => (
+                  <option key={type} value={type}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className='mb-4'>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                구체적인 신고 내용을 기재해주세요.
+              </label>
+              <textarea
+                className='w-full border border-gray-300 rounded-md p-2 h-32 resize-none'
+                placeholder='구체적인 신고 내용을 기재해주세요.'
+                value={reportContent}
+                onChange={e => setReportContent(e.target.value)}
+              ></textarea>
+            </div>
+
+            <div className='flex justify-center'>
+              <button
+                onClick={handleSubmitReport}
+                disabled={isActionLoading}
+                className='bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition disabled:opacity-50 mr-2'
+              >
+                {isActionLoading ? '처리 중...' : '신고'}
+              </button>
+              <button
+                onClick={handleCloseReportModal}
+                className='border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-100 transition'
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
