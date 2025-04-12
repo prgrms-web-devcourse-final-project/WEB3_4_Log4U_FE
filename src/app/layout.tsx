@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { axiosInstance } from '../../services/axios.instance';
 import './globals.css';
+import { MockProvider } from './components/mockProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -26,13 +27,6 @@ export default function RootLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // 개발 환경에서만 MSW 로드
-    if (process.env.NODE_ENV === 'development') {
-      import('../mocks').catch(error => {
-        console.error('MSW 로드 오류:', error);
-      });
-    }
-
     axiosInstance
       .get('users/me')
       .then(response => {
@@ -44,7 +38,7 @@ export default function RootLayout({
           });
         }
       })
-      .catch(() => {
+      .catch(_error => {
         router.push('/login');
       });
   }, []);
@@ -52,6 +46,7 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <MockProvider />
         <div className='bg-neutral h-screen text-text box-border'>
           {pathname === '/login' ? (
             <div className='h-full w-full grid grid-cols-[280px_1fr_280px] gap-4'>
