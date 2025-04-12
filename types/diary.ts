@@ -1,3 +1,5 @@
+import { Pagination } from './pagination';
+
 export namespace Diary {
   export function isVisibility(value: string): value is Diary.Visibility {
     return Object.values(Diary.Visibility).includes(value as Diary.Visibility);
@@ -29,8 +31,8 @@ export namespace Diary {
 
   export type Visibility = (typeof Visibility)[keyof typeof Visibility];
   export const SortType = {
-    LATEST: 'latest',
-    LIKE: 'like',
+    LATEST: 'LATEST',
+    POPULAR: 'POPULAR',
   } as const;
 
   export type SortType = (typeof SortType)[keyof typeof SortType];
@@ -104,4 +106,14 @@ export namespace Diary {
   }
 
   export interface UpdateDto extends CreateDto {}
+
+  export class GetListCursorDto {
+    keyword?: string;
+
+    sort?: SortType = SortType.LATEST;
+
+    cursorId?: number;
+
+    size?: number = Pagination.DEFAULT_SIZE;
+  }
 }

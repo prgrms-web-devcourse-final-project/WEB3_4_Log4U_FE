@@ -1,4 +1,6 @@
 export namespace Pagination {
+  export const DEFAULT_SIZE = 9;
+
   export interface OffsetMeta {
     page: number;
     size: number;

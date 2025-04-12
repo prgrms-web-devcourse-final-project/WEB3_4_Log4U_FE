@@ -7,7 +7,7 @@ export class DiaryService {
   private static CREATE_DIARY_API = '/diaries';
   private static UPDATE_DIARY_API = (id: number) => `/diaries/${id}`;
   private static DELETE_DIARY_API = (id: number) => `/diaries/${id}`;
-  private static GET_DIARY_LIST_API = '/diaries';
+  private static GET_DIARY_LIST_API = '/diaries/search';
   private static GET_MY_DIARY_LIST_API = (userId: number) => `/diaries/users/${userId}`;
   private static GET_DIARY_DETAIL_API = (id: number) => `/diaries/${id}`;
 
@@ -99,12 +99,7 @@ export class DiaryService {
     }
   }
 
-  static async getDiaries(params: {
-    size: string;
-    visibility: string;
-    page: string;
-    sort: string;
-  }) {
+  static async getDiaries(params: Diary.GetListCursorDto) {
     try {
       return await axiosInstance
         .request<Pagination.IOffSet<Diary.Summary>>({
