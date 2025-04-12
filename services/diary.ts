@@ -1,6 +1,7 @@
 import { axiosInstance } from './axios.instance';
 import { Diary } from '../types/diary';
 import { Pagination } from '@root/types/pagination';
+import { AxiosResponse } from 'axios';
 
 // 다이어리 생성 API 호출 함수
 export class DiaryService {
@@ -48,7 +49,7 @@ export class DiaryService {
         });
       } else {
         // 일반 JSON 요청
-        await axiosInstance.request<unknown, void, Diary.CreateDto>({
+        await axiosInstance.request<void, AxiosResponse<void>, Diary.CreateDto>({
           url: this.CREATE_DIARY_API,
           method: 'POST',
           data: newDiary,
@@ -62,7 +63,7 @@ export class DiaryService {
 
   static async updateDiary(id: string, updateDto: Diary.UpdateDto) {
     try {
-      await axiosInstance.request<unknown, void, Diary.UpdateDto>({
+      await axiosInstance.request<void, AxiosResponse<void>, Diary.UpdateDto>({
         url: this.UPDATE_DIARY_API(parseInt(id)),
         method: 'PATCH',
         data: updateDto,
