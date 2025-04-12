@@ -267,12 +267,18 @@ const DiaryCreatePage: FC = () => {
         );
 
         // 2. S3에 파일 업로드 (진행 상태 추적)
-        await MediaService.uploadFileToS3(presignedUrl, file, fileId, (fileId, progress) => {
-          setUploadProgress(prev => ({
-            ...prev,
-            [fileId]: progress,
-          }));
-        });
+        await MediaService.uploadFileToS3(
+          presignedUrl,
+          file,
+          fileId,
+          contentType,
+          (fileId, progress) => {
+            setUploadProgress(prev => ({
+              ...prev,
+              [fileId]: progress,
+            }));
+          }
+        );
 
         // 3. 미디어 아이템 생성
         const mediaItem: Diary.DiaryMedia = {
