@@ -262,7 +262,8 @@ const DiaryCreatePage: FC = () => {
         // 1. 백엔드에서 presigned URL 요청
         const { presignedUrl, fileUrl, mediaId } = await MediaService.getPresignedUrl(
           originalName,
-          contentType
+          contentType,
+          size
         );
 
         // 2. S3에 파일 업로드 (진행 상태 추적)
