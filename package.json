@@ -16,7 +16,6 @@
   "dependencies": {
     "@react-google-maps/api": "^2.20.6",
     "axios": "^1.8.4",
-    "msw": "2.4.3",
     "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -35,10 +34,5 @@
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
   }
 }
