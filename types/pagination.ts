@@ -11,7 +11,7 @@ export namespace Pagination {
     size: number;
     totalElements: number;
     hasNext: boolean;
-    nextCursor: string;
+    nextCursor: number;
   }
 
   export interface ICursor<T> {
@@ -22,5 +22,10 @@ export namespace Pagination {
   export interface IOffSet<T> {
     list: T[];
     pageInfo: OffsetMeta;
+  }
+
+  export interface CursorDto {
+    cursorId?: number;
+    size?: number;
   }
 }

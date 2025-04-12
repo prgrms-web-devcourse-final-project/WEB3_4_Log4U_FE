@@ -121,12 +121,27 @@ export class DiaryService {
     }
   }
 
-  static async getMyDiaries(userId: number) {
+  static async getMyDiaries(
+    userId: number,
+    options?: Pagination.CursorDto
+  ): Promise<Pagination.ICursor<Diary.Summary>> {
     try {
+      // 쿼리 파라미터 설정
+      const params: Record<string, string> = {};
+
+      if (options?.cursorId) {
+        params.cursor = String(options.cursorId);
+      }
+
+      if (options?.size) {
+        params.size = String(options.size);
+      }
+
       return await axiosInstance
-        .request<Pagination.IOffSet<Diary.Summary>>({
+        .request<Pagination.ICursor<Diary.Summary>>({
           url: this.GET_MY_DIARY_LIST_API(userId),
           method: 'GET',
+          params: params,
         })
         .then(response => {
           return response.data;
