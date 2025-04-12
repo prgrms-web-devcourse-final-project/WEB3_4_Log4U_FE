@@ -30,6 +30,7 @@ export default function DiaryPage() {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
   const [cursor, setCursor] = useState<number | undefined>(undefined);
+  const [isAuthor, setIsAuthor] = useState<boolean>(false);
   const commentsContainerRef = useRef<HTMLDivElement | null>(null);
 
   // 좋아요 상태 관리 (좋아요 여부만 별도로 관리)
@@ -104,6 +105,8 @@ export default function DiaryPage() {
         // 현재 사용자 정보 가져오기
         const userData = await UserService.getMe();
         setUser(userData);
+
+        setIsAuthor(diaryData?.userId === userData?.userId);
 
         // 최초 댓글 목록 가져오기
         fetchComments();
@@ -273,9 +276,6 @@ export default function DiaryPage() {
 
     return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
-
-  // 현재 사용자가 작성자인지 확인
-  const isAuthor = diary?.userId === user?.userId;
 
   // 다이어리 작성자 정보 표시 (타입 오류 수정)
   const authorName = diary?.userId?.toString() === user?.userId ? user?.name : '다른 사용자';
@@ -456,89 +456,76 @@ export default function DiaryPage() {
 
         {/* 액션 버튼 */}
         <div className='border-t'>
-          <div className='p-3 flex space-x-4 border-b'>
+          <div className='p-3 flex items-center border-b'>
             <button
               onClick={handleLike}
-              className='focus:outline-none transition-colors duration-200 text-red-500'
+              className='focus:outline-none transition-colors duration-200 text-red-500 block mr-2'
             >
               <svg
                 xmlns='http://www.w3.org/2000/svg'
                 className='h-6 w-6'
                 fill={isLiked ? 'currentColor' : 'none'}
-                viewBox='0 0 24 24'
+                viewBox='0 0 20 20'
                 stroke='currentColor'
+                style={{ transform: 'scale(1.2)' }}
               >
                 <path
                   strokeLinecap='round'
                   strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z'
+                  strokeWidth={1.5}
+                  d='M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z'
                 />
               </svg>
             </button>
-            <button>
+            <button className='mr-2 block'>
               <svg
                 xmlns='http://www.w3.org/2000/svg'
                 className='h-6 w-6'
                 fill='none'
-                viewBox='0 0 24 24'
+                viewBox='0 0 20 20'
                 stroke='currentColor'
+                style={{ transform: 'scale(1.2)' }}
               >
                 <path
                   strokeLinecap='round'
                   strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'
-                />
-              </svg>
-            </button>
-            <button>
-              <svg
-                xmlns='http://www.w3.org/2000/svg'
-                className='h-6 w-6'
-                fill='none'
-                viewBox='0 0 24 24'
-                stroke='currentColor'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z'
+                  strokeWidth={1.5}
+                  d='M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z'
                 />
               </svg>
             </button>
 
-            {/* 수정/삭제 버튼 */}
+            {/* 수정/삭제 버튼 (작성자인 경우) */}
             {isAuthor && (
-              <div className='ml-auto flex space-x-2'>
+              <>
                 <Link
                   href={`/diaries/${diary.diaryId}/edit`}
-                  className='px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
+                  className='w-6 h-6 transition hover:opacity-80 block mr-2'
+                  title='수정'
                 >
-                  수정
+                  <img src='/edit.png' alt='수정' className='w-full h-full object-contain' />
                 </Link>
                 <button
                   onClick={handleDelete}
                   disabled={isActionLoading}
-                  className='px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50'
+                  className='w-6 h-6 transition hover:opacity-80 disabled:opacity-50 block'
+                  title='삭제'
                 >
-                  {isActionLoading ? '처리 중...' : '삭제'}
+                  <img src='/delete.png' alt='삭제' className='w-full h-full object-contain' />
                 </button>
-              </div>
+              </>
             )}
 
-            {/* 작성자가 아닐 경우 신고 버튼 */}
+            {/* 신고 버튼 (작성자가 아닐 경우) */}
             {!isAuthor && (
-              <div className='ml-auto'>
-                <button
-                  onClick={handleReport}
-                  disabled={isActionLoading}
-                  className='px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition disabled:opacity-50'
-                >
-                  {isActionLoading ? '처리 중...' : '신고'}
-                </button>
-              </div>
+              <button
+                onClick={handleReport}
+                disabled={isActionLoading}
+                className='w-6 h-6 transition hover:opacity-80 disabled:opacity-50'
+                title='신고'
+              >
+                <img src='/report.png' alt='신고' className='w-full h-full object-contain' />
+              </button>
             )}
           </div>
 
