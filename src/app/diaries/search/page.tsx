@@ -72,7 +72,7 @@ export default function SearchPage() {
     const pages = [];
     const maxVisiblePages = 5;
     let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
@@ -219,7 +219,7 @@ export default function SearchPage() {
               >
                 <div className='h-40 bg-gray-200 relative'>
                   <img
-                    src={diary.thumbnailUrl || '/api/placeholder/300/200'}
+                    src={diary.thumbnailUrl || '/diary-thumbnail-test.png'}
                     alt='다이어리 이미지'
                     className='w-full h-full object-cover'
                   />

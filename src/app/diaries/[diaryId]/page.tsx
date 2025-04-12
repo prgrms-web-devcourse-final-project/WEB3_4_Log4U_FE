@@ -332,9 +332,11 @@ export default function DiaryPage() {
             className='w-full h-full object-contain'
           />
         ) : (
-          <div className='w-full h-full flex items-center justify-center text-gray-500'>
-            이미지가 없습니다
-          </div>
+          <img
+            src='/diary-thumbnail-test.png'
+            alt='기본 다이어리 썸네일'
+            className='w-full h-full object-contain'
+          />
         )}
       </div>
 
@@ -344,12 +346,14 @@ export default function DiaryPage() {
         <div className='p-4 border-b flex items-center justify-between'>
           <div className='flex items-center'>
             <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
-              {diary.thumbnailUrl ? (
-                <img src={diary.thumbnailUrl} alt='프로필' className='w-full h-full object-cover' />
+              {user?.profileImage ? (
+                <img src={user.profileImage} alt='프로필' className='w-full h-full object-cover' />
               ) : (
-                <div className='w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs'>
-                  No image
-                </div>
+                <img
+                  src='/test-profile.png'
+                  alt='기본 프로필'
+                  className='w-full h-full object-cover'
+                />
               )}
             </div>
             <div>
@@ -409,9 +413,18 @@ export default function DiaryPage() {
                         className='w-full h-full object-cover'
                       />
                     ) : (
-                      <div className='w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs'>
-                        No image
-                      </div>
+                      <svg
+                        xmlns='http://www.w3.org/2000/svg'
+                        className='h-full w-full text-gray-400 bg-gray-300'
+                        viewBox='0 0 20 20'
+                        fill='currentColor'
+                      >
+                        <path
+                          fillRule='evenodd'
+                          d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z'
+                          clipRule='evenodd'
+                        />
+                      </svg>
                     )}
                   </div>
                   <div className='flex items-center'>
