@@ -9,6 +9,7 @@ import { UserService } from '@root/services/user';
 import { Comment } from '@root/types/comment';
 import { User } from '@root/types/user';
 import { CommentService } from '@root/services/comments';
+import { LikeService } from '@root/services/like';
 
 export default function DiaryPage() {
   const router = useRouter();
@@ -30,6 +31,9 @@ export default function DiaryPage() {
   const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
   const [cursor, setCursor] = useState<number | undefined>(undefined);
   const commentsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // 좋아요 상태 관리 (좋아요 여부만 별도로 관리)
+  const [isLiked, setIsLiked] = useState<boolean>(false);
 
   // 댓글 불러오기 함수
   const fetchComments = useCallback(
@@ -93,6 +97,9 @@ export default function DiaryPage() {
         // 다이어리 상세 정보 가져오기
         const diaryData = await DiaryService.getDiary(diaryId);
         setDiary(diaryData);
+
+        // 좋아요 상태 초기화 - 실제 API에서 이 정보를 제공한다면 그 값을 사용
+        setIsLiked(false); // 초기값은 false로 설정
 
         // 현재 사용자 정보 가져오기
         const userData = await UserService.getMe();
@@ -190,20 +197,36 @@ export default function DiaryPage() {
 
   // 좋아요 처리 핸들러
   const handleLike = async () => {
-    if (!diary) return;
+    if (!diary || !user) return;
 
     try {
-      // @todo: 좋아요 API 호출
-      // const response = await DiaryService.likeDiary(diary.diaryId);
+      if (isLiked) {
+        // 좋아요가 이미 되어 있으면 좋아요 취소
+        await LikeService.deleteLike(diary.diaryId);
 
-      // 임시: 좋아요 수 증가 UI만 반영
-      setDiary(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          likeCount: prev.likeCount + 1,
-        };
-      });
+        // 상태 업데이트
+        setIsLiked(false);
+        setDiary(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            likeCount: Math.max(prev.likeCount - 1, 0), // 음수가 되지 않도록
+          };
+        });
+      } else {
+        // 좋아요가 되어 있지 않으면 좋아요 등록
+        await LikeService.createLike(diary.diaryId);
+
+        // 상태 업데이트
+        setIsLiked(true);
+        setDiary(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            likeCount: prev.likeCount + 1,
+          };
+        });
+      }
     } catch (err) {
       console.error('좋아요 처리 중 오류 발생:', err);
     }
@@ -421,11 +444,14 @@ export default function DiaryPage() {
         {/* 액션 버튼 */}
         <div className='border-t'>
           <div className='p-3 flex space-x-4 border-b'>
-            <button onClick={handleLike}>
+            <button
+              onClick={handleLike}
+              className='focus:outline-none transition-colors duration-200 text-red-500'
+            >
               <svg
                 xmlns='http://www.w3.org/2000/svg'
                 className='h-6 w-6'
-                fill='none'
+                fill={isLiked ? 'currentColor' : 'none'}
                 viewBox='0 0 24 24'
                 stroke='currentColor'
               >
