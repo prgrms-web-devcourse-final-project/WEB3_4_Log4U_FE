@@ -211,11 +211,10 @@ const DiaryCreatePage: FC = () => {
       console.error('위치 정보 가져오기 실패:', error);
       if (error instanceof Error) {
         setLocationError(
-          // error.message || '위치 정보를 가져오는데 실패했습니다. 권한을 확인해주세요.'
-          error.message || '위치 .'
+          error.message || '위치 정보를 가져오는데 실패했습니다. 권한을 확인해주세요.'
         );
       } else {
-        setLocationError('위치.');
+        setLocationError('위치 정보를 가져오는데 실패했습니다. 권한을 확인해주세요.');
       }
     } finally {
       setIsLoadingLocation(false);
