@@ -13,7 +13,7 @@ export namespace Comment {
     };
   }
 
-  export interface Detail {}
+  export interface Detail extends Summary {}
 
   export class CreateDto {
     diaryId!: number;

@@ -109,7 +109,7 @@ export default function DiaryPage() {
     };
 
     fetchDiary();
-  }, []);
+  }, [diaryId]);
 
   // 스크롤 이벤트 리스너 등록
   useEffect(() => {
@@ -171,10 +171,13 @@ export default function DiaryPage() {
     setIsActionLoading(true);
 
     try {
-      // 실제 댓글 API 호출
+      // CommentService.createComment 메서드는 내부적으로
+      // /comments/{diaryId} 엔드포인트로 { comment: comment } 형태의 요청을 보냄
+      // 이 메서드는 Comment.Detail 타입의 응답을 반환함
       const newComment = await CommentService.createComment(diaryId, comment);
 
       // 새 댓글을 목록 맨 위에 추가
+      // newComment는 Comment.Detail 타입으로 commentId, content, author 등의 정보를 포함
       setComments(prev => [newComment, ...prev]);
       setComment('');
     } catch (err) {
@@ -521,7 +524,7 @@ export default function DiaryPage() {
               className='px-2 py-1 bg-gray-800 text-white text-sm rounded disabled:opacity-50'
               disabled={!comment.trim() || isActionLoading}
             >
-              전송
+              게시
             </button>
           </form>
         </div>
