@@ -6,7 +6,6 @@ import { UserService } from '@root/services/user';
 import { Diary } from '@root/types/diary';
 import { User } from '@root/types/user';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 function MyDiaries(diaries: Diary.Summary[]) {
@@ -53,17 +52,14 @@ function MyDiaries(diaries: Diary.Summary[]) {
 }
 
 export default function HomePage({ params }: { params: { id: string } }) {
-  const router = useRouter();
   const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
   const [user, setUser] = useState<User.Me | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(8);
 
   // 데이터 불러오기
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
       try {
         // 목 데이터 사용
         // @todo: users/me 불러오도록  변경 필요.
@@ -77,7 +73,6 @@ export default function HomePage({ params }: { params: { id: string } }) {
       } catch (error) {
         console.error('데이터 로딩 중 오류 발생:', error);
       } finally {
-        setIsLoading(false);
       }
     };
 
