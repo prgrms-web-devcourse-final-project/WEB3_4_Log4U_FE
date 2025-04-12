@@ -7,25 +7,28 @@ export interface PresignedUrlResponse {
 }
 
 export class MediaService {
-  private static PRESIGNED_URL_API = '/media/presinged-url';
+  private static PRESIGNED_URL_API = '/media/presigned-url';
 
   /**
    * 백엔드에서 S3 presigned URL을 가져옵니다.
    * @param fileName 파일 이름
    * @param contentType 파일 타입 (MIME 타입)
+   * @param size 파일 크기 (바이트)
    * @returns presigned URL, 접근 가능한 파일 URL, 미디어 ID
    */
   static async getPresignedUrl(
-    fileName: string,
-    contentType: string
+    filename: string,
+    contentType: string,
+    size: number
   ): Promise<PresignedUrlResponse> {
     try {
       const { data } = await axiosInstance.request<PresignedUrlResponse>({
         url: this.PRESIGNED_URL_API,
         method: 'POST',
         data: {
-          fileName,
+          filename,
           contentType,
+          size,
         },
       });
 
