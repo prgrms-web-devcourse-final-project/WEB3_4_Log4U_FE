@@ -26,6 +26,13 @@ export default function RootLayout({
   const router = useRouter();
 
   useEffect(() => {
+    // 개발 환경에서만 MSW 로드
+    if (process.env.NODE_ENV === 'development') {
+      import('../mocks').catch(error => {
+        console.error('MSW 로드 오류:', error);
+      });
+    }
+
     axiosInstance
       .get('users/me')
       .then(response => {
