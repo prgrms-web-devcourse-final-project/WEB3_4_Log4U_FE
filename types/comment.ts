@@ -4,7 +4,7 @@ export namespace Comment {
 
     content: string;
 
-    author: {
+    author?: {
       userId: number;
 
       nickname: string;

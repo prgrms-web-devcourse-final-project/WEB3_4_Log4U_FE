@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Diary } from '@root/types/diary';
@@ -8,8 +8,7 @@ import { DiaryService } from '@root/services/diary';
 import { UserService } from '@root/services/user';
 import { Comment } from '@root/types/comment';
 import { User } from '@root/types/user';
-import { ImageUtil } from '@root/utils/image.util';
-import { MockUtil } from '@root/utils/mock.util';
+import { CommentService } from '@root/services/comments';
 
 export default function DiaryPage() {
   const router = useRouter();
@@ -26,107 +25,105 @@ export default function DiaryPage() {
   const [comment, setComment] = useState<string>('');
   const [comments, setComments] = useState<Comment.Summary[]>([]);
 
-  // 예시 댓글 데이터 - 백엔드 API 연동 전 임시 사용
-  const mockComments: Comment.Summary[] = [
-    {
-      commentId: 1,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 101,
-        nickname: 'ppakse',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
+  // 무한 스크롤을 위한 상태 추가
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
+  const [cursor, setCursor] = useState<number | undefined>(undefined);
+  const commentsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // 댓글 불러오기 함수
+  const fetchComments = useCallback(
+    async (cursorId?: number) => {
+      if (commentsLoading) return;
+
+      setCommentsLoading(true);
+      try {
+        const query: Comment.GetListCursorDto = {
+          size: 10,
+          cursorCommentId: cursorId,
+        };
+
+        const commentsData = await CommentService.getComments(diaryId, query);
+
+        if (cursorId) {
+          // 기존 댓글에 추가
+          setComments(prev => [...prev, ...commentsData.list]);
+        } else {
+          // 처음 로딩할 때는 새로 세팅
+          setComments(commentsData.list);
+        }
+
+        // 더 불러올 댓글이 있는지 확인
+        setHasMore(commentsData.pageInfo.hasNext);
+
+        // 다음 요청에 사용할 커서 업데이트
+        if (commentsData.list.length > 0) {
+          const lastComment = commentsData.list[commentsData.list.length - 1];
+          setCursor(lastComment.commentId);
+        }
+      } catch (err) {
+        console.error('댓글 로딩 중 오류 발생:', err);
+      } finally {
+        setCommentsLoading(false);
+      }
     },
-    {
-      commentId: 2,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 102,
-        nickname: 'mjpark',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
-    },
-    {
-      commentId: 3,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 103,
-        nickname: 'leesom',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
-    },
-    {
-      commentId: 4,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 104,
-        nickname: 'rosy',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
-    },
-    {
-      commentId: 5,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 105,
-        nickname: 'mark',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
-    },
-    {
-      commentId: 6,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 106,
-        nickname: 'cr7',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
-    },
-    {
-      commentId: 7,
-      content: 'good',
-      createdAt: new Date().toISOString(),
-      author: {
-        userId: 107,
-        nickname: 'dzew',
-        thumbnailUrl: ImageUtil.randomPicture(40, 40),
-      },
-    },
-  ];
+    [diaryId, commentsLoading]
+  );
+
+  // 스크롤 이벤트 핸들러
+  const handleCommentsScroll = useCallback(() => {
+    if (!commentsContainerRef.current || commentsLoading || !hasMore) return;
+
+    const container = commentsContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+
+    // 스크롤이 하단 20px 이내에 도달했을 때 추가 댓글 로드
+    if (scrollHeight - scrollTop <= clientHeight + 20) {
+      fetchComments(cursor);
+    }
+  }, [cursor, fetchComments, commentsLoading, hasMore]);
 
   // 다이어리 데이터 가져오기
   useEffect(() => {
     const fetchDiary = async () => {
       setIsLoading(true);
+      setError('');
+
       try {
-        // const diary = await DiaryService.getDiary(diaryId);
-        const [diary] = MockUtil.IDiary.Details(1);
-        setDiary(diary);
+        // 다이어리 상세 정보 가져오기
+        const diaryData = await DiaryService.getDiary(diaryId);
+        setDiary(diaryData);
 
         // 현재 사용자 정보 가져오기
-        const user = await UserService.getMe();
-        setUser(user);
+        const userData = await UserService.getMe();
+        setUser(userData);
 
-        // 백엔드 API 연동 전 임시로 목업 댓글 데이터 사용
-        // 실제로는 댓글 조회 API를 호출해야 함
-        setComments(mockComments);
-      } catch (err) {
-        notFound();
-        console.error('다이어리 정보를 불러오는 중 오류가 발생했습니다:', err);
-        setError('다이어리를 불러올 수 없습니다.');
+        // 최초 댓글 목록 가져오기
+        fetchComments();
+      } catch (error) {
+        console.error('다이어리 로딩 중 오류 발생:', error);
+        setError('다이어리를 불러오는 중 오류가 발생했습니다.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDiary();
-  }, [params.diaryId]);
+  }, []);
+
+  // 스크롤 이벤트 리스너 등록
+  useEffect(() => {
+    const currentRef = commentsContainerRef.current;
+    if (currentRef) {
+      currentRef.addEventListener('scroll', handleCommentsScroll);
+    }
+
+    return () => {
+      if (currentRef) {
+        currentRef.removeEventListener('scroll', handleCommentsScroll);
+      }
+    };
+  }, [handleCommentsScroll]);
 
   // 다이어리 삭제 핸들러
   const handleDelete = async () => {
@@ -174,23 +171,11 @@ export default function DiaryPage() {
     setIsActionLoading(true);
 
     try {
-      // @todo: 댓글 생성 API 호출
+      // 실제 댓글 API 호출
+      const newComment = await CommentService.createComment(diaryId, comment);
 
-      // 백엔드 API 연동 전 임시로 댓글 추가
-      const newComment: Comment.Summary = {
-        commentId: Date.now(),
-        content: comment,
-        createdAt: new Date().toISOString(),
-        author: {
-          userId: user?.userId ?? 0,
-          nickname: 'me', // 실제로는 현재 사용자의 닉네임을 가져와야 함
-          thumbnailUrl: ImageUtil.randomPicture(10, 10), // 실제로는 현재 사용자의 프로필 이미지를 가져와야 함
-        },
-      };
-
-      setComments(prev => [...prev, newComment]);
-
-      // 입력 필드 초기화
+      // 새 댓글을 목록 맨 위에 추가
+      setComments(prev => [newComment, ...prev]);
       setComment('');
     } catch (err) {
       console.error('댓글 작성 중 오류 발생:', err);
@@ -206,8 +191,9 @@ export default function DiaryPage() {
 
     try {
       // @todo: 좋아요 API 호출
+      // const response = await DiaryService.likeDiary(diary.diaryId);
 
-      // 임시로 좋아요 수 증가
+      // 임시: 좋아요 수 증가 UI만 반영
       setDiary(prev => {
         if (!prev) return prev;
         return {
@@ -234,6 +220,40 @@ export default function DiaryPage() {
     }
     return `${count}개`;
   };
+
+  // 날짜 포맷팅
+  const formatDate = (dateStr?: string): string => {
+    if (!dateStr) return '날짜 정보 없음';
+
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+
+    // 1일 이내
+    if (diff < 24 * 60 * 60 * 1000) {
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      if (hours < 1) {
+        const minutes = Math.floor(diff / (60 * 1000));
+        return `${minutes === 0 ? 1 : minutes}분 전`;
+      }
+      return `${hours}시간 전`;
+    }
+
+    // 7일 이내
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days}일 전`;
+    }
+
+    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
+
+  // 현재 사용자가 작성자인지 확인
+  const isAuthor = diary?.userId === user?.userId;
+
+  // 다이어리 작성자 정보 표시 (타입 오류 수정)
+  const authorName = diary?.userId?.toString() === user?.userId ? user?.name : '다른 사용자';
+  const locationText = diary?.dongmyun || '위치 정보 없음';
 
   if (isLoading) {
     return (
@@ -275,20 +295,21 @@ export default function DiaryPage() {
     );
   }
 
-  // 현재 사용자가 작성자인지 확인
-  const isAuthor = diary.userId === user?.userId;
-
   return (
     <div className='flex h-screen'>
       {/* 좌측: 다이어리 이미지 */}
       <div className='w-3/5 bg-black relative'>
-        {
+        {diary.thumbnailUrl ? (
           <img
-            src={diary.thumbnailUrl ?? ImageUtil.randomPicture(800, 600)}
+            src={diary.thumbnailUrl}
             alt='다이어리 썸네일'
             className='w-full h-full object-contain'
           />
-        }
+        ) : (
+          <div className='w-full h-full flex items-center justify-center text-gray-500'>
+            이미지가 없습니다
+          </div>
+        )}
       </div>
 
       {/* 우측: 다이어리 정보 및 댓글 */}
@@ -297,16 +318,17 @@ export default function DiaryPage() {
         <div className='p-4 border-b flex items-center justify-between'>
           <div className='flex items-center'>
             <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
-              {/* 실제 구현에서는 사용자 프로필 이미지 사용 */}
-              <img
-                src={user?.profileImage ?? ImageUtil.randomPicture(40, 40)}
-                alt='프로필'
-                className='w-full h-full object-cover'
-              />
+              {diary.thumbnailUrl ? (
+                <img src={diary.thumbnailUrl} alt='프로필' className='w-full h-full object-cover' />
+              ) : (
+                <div className='w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs'>
+                  No image
+                </div>
+              )}
             </div>
             <div>
-              <div className='font-bold'>winter</div>
-              <div className='text-sm text-gray-600'>Seoul, korea</div>
+              <div className='font-bold'>{authorName}</div>
+              <div className='text-sm text-gray-600'>{locationText}</div>
             </div>
           </div>
           <button onClick={handleClose} className='text-gray-500'>
@@ -329,53 +351,68 @@ export default function DiaryPage() {
 
         {/* 본문 */}
         <div className='p-4 border-b'>
-          <p>
-            {diary.content ||
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'}
-          </p>
+          <h2 className='text-xl font-bold mb-2'>{diary.title}</h2>
+          <p>{diary.content || '내용이 없습니다.'}</p>
+
+          {/* 다이어리 메타 정보 */}
+          {diary.weatherInfo && (
+            <div className='mt-2 text-sm text-gray-600'>
+              <span className='mr-2'>
+                날씨: {Diary.WeatherMap[diary.weatherInfo] || diary.weatherInfo}
+              </span>
+              {/* temperature 프로퍼티가 없으므로 주석 처리 */}
+              {/* {diary.temperature !== undefined && <span>온도: {diary.temperature}°C</span>} */}
+            </div>
+          )}
         </div>
 
-        {/* 댓글 목록 */}
-        <div className='flex-1 overflow-y-auto'>
-          {comments.map(comment => (
-            <div key={comment.commentId} className='p-4 border-b flex items-center justify-between'>
-              <div className='flex items-center'>
-                <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
-                  {comment.author.thumbnailUrl ? (
-                    <img
-                      src={comment.author.thumbnailUrl}
-                      alt={`${comment.author.nickname}의 프로필`}
-                      className='w-full h-full object-cover'
-                    />
-                  ) : (
-                    <img
-                      src='/api/placeholder/40/40'
-                      alt={`${comment.author.nickname}의 프로필`}
-                      className='w-full h-full object-cover'
-                    />
-                  )}
-                </div>
+        {/* 댓글 목록 - 무한 스크롤 적용 */}
+        <div ref={commentsContainerRef} className='flex-1 overflow-y-auto'>
+          {comments.length > 0 ? (
+            comments.map(comment => (
+              <div
+                key={comment.commentId}
+                className='p-4 border-b flex items-center justify-between'
+              >
                 <div className='flex items-center'>
-                  <span className='font-medium mr-2'>{comment.author.nickname}</span>
-                  <span className='text-gray-600'>{comment.content}</span>
+                  <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
+                    {comment.author?.thumbnailUrl ? (
+                      <img
+                        src={comment.author?.thumbnailUrl}
+                        alt={`${comment.author?.nickname}의 프로필`}
+                        className='w-full h-full object-cover'
+                      />
+                    ) : (
+                      <div className='w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs'>
+                        No image
+                      </div>
+                    )}
+                  </div>
+                  <div className='flex items-center'>
+                    <span className='font-medium mr-2'>{comment.author?.nickname}</span>
+                    <span className='text-gray-600'>{comment.content}</span>
+                  </div>
                 </div>
               </div>
-              <button>
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  className='h-5 w-5 text-gray-400'
-                  viewBox='0 0 20 20'
-                  fill='currentColor'
-                >
-                  <path
-                    fillRule='evenodd'
-                    d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z'
-                    clipRule='evenodd'
-                  />
-                </svg>
-              </button>
+            ))
+          ) : (
+            <div className='p-4 text-center text-gray-500'>
+              댓글이 없습니다. 첫 댓글을 작성해보세요!
             </div>
-          ))}
+          )}
+
+          {/* 댓글 로딩 표시 */}
+          {commentsLoading && (
+            <div className='p-4 text-center'>
+              <div className='inline-block animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500'></div>
+              <span className='ml-2 text-sm text-gray-500'>댓글 불러오는 중...</span>
+            </div>
+          )}
+
+          {/* 더 이상 불러올 댓글이 없음을 표시 */}
+          {!commentsLoading && !hasMore && comments.length > 0 && (
+            <div className='p-3 text-center text-sm text-gray-500'>더 이상 댓글이 없습니다.</div>
+          )}
         </div>
 
         {/* 액션 버튼 */}
@@ -429,27 +466,29 @@ export default function DiaryPage() {
                 />
               </svg>
             </button>
+
+            {/* 수정/삭제 버튼 */}
             {isAuthor && (
-              <div className='hidden absolute top-4 right-4 z-10 space-y-2'>
+              <div className='ml-auto flex space-x-2'>
                 <Link
-                  href={`/diary/${diary.diaryId}/edit`}
-                  className='block px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
+                  href={`/diaries/${diary.diaryId}/edit`}
+                  className='px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
                 >
                   수정
                 </Link>
                 <button
                   onClick={handleDelete}
                   disabled={isActionLoading}
-                  className='block w-full px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50'
+                  className='px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50'
                 >
                   {isActionLoading ? '처리 중...' : '삭제'}
                 </button>
               </div>
             )}
 
-            {/* 작성자가 아닐 경우 신고 버튼 (화면 외부에 배치) */}
+            {/* 작성자가 아닐 경우 신고 버튼 */}
             {!isAuthor && (
-              <div className='hidden absolute top-4 right-4 z-10'>
+              <div className='ml-auto'>
                 <button
                   onClick={handleReport}
                   disabled={isActionLoading}
@@ -463,10 +502,8 @@ export default function DiaryPage() {
 
           {/* 좋아요 수 및 날짜 */}
           <div className='p-3'>
-            <div className='font-medium text-sm'>
-              좋아요 {formatNumber(diary.likeCount || 162900)}
-            </div>
-            <div className='text-xs text-gray-500 mt-1'>1일 전</div>
+            <div className='font-medium text-sm'>좋아요 {formatNumber(diary.likeCount || 0)}</div>
+            <div className='text-xs text-gray-500 mt-1'>{formatDate(diary.createdAt)}</div>
           </div>
 
           {/* 댓글 입력창 */}
@@ -489,8 +526,6 @@ export default function DiaryPage() {
           </form>
         </div>
       </div>
-
-      {/* 작성자일 경우 수정/삭제 버튼 (화면 외부에 배치하여 필요할 때 CSS로 표시) */}
     </div>
   );
 }
