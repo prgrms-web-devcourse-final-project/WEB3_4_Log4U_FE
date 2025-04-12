@@ -1,72 +1,15 @@
 'use client';
 
 import GoogleMapComponent from '@/app/googleMap';
+import { DiaryService } from '@root/services/diary';
+import { UserService } from '@root/services/user';
 import { Diary } from '@root/types/diary';
 import { User } from '@root/types/user';
-import { MockUtil } from '@root/utils/mock.util';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-const diaries = [
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-  {
-    thumbnailUrl: '/diary-thumbnail-test.png',
-    name: 'mydiary',
-    likeCount: 222,
-    authorName: 'winter',
-  },
-];
-
-function MyDiaries(diaries: Diary.Detail[]) {
+function MyDiaries(diaries: Diary.Summary[]) {
   return (
     <div className='mt-6 grid grid-cols-3 gap-4'>
       {diaries.length > 0
@@ -111,7 +54,7 @@ function MyDiaries(diaries: Diary.Detail[]) {
 
 export default function HomePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [diaries, setDiaries] = useState<Diary.Detail[]>([]);
+  const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
   const [user, setUser] = useState<User.Me | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -125,9 +68,11 @@ export default function HomePage({ params }: { params: { id: string } }) {
         // 목 데이터 사용
         // @todo: users/me 불러오도록  변경 필요.
 
-        const user = MockUtil.IUser.Me();
+        const user = await UserService.getMe();
+
+        const { list } = await DiaryService.getMyDiaries(user.userId);
         setUser(user);
-        setDiaries(user.list);
+        setDiaries(list);
         setTotalPages(8);
       } catch (error) {
         console.error('데이터 로딩 중 오류 발생:', error);
@@ -230,7 +175,7 @@ export default function HomePage({ params }: { params: { id: string } }) {
         {/* 구글 맵 */}
         <GoogleMapComponent
           markers={
-            user?.list.map(diary => ({
+            diaries.map(diary => ({
               id: diary.diaryId,
               lat: diary.latitude,
               lng: diary.longitude,

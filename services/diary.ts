@@ -8,6 +8,7 @@ export class DiaryService {
   private static UPDATE_DIARY_API = (id: number) => `/diaries/${id}`;
   private static DELETE_DIARY_API = (id: number) => `/diaries/${id}`;
   private static GET_DIARY_LIST_API = '/diaries';
+  private static GET_MY_DIARY_LIST_API = (userId: number) => `/diaries/users/${userId}`;
   private static GET_DIARY_DETAIL_API = (id: number) => `/diaries/${id}`;
 
   static async createDiary(newDiary: Diary.CreateDto): Promise<void> {
@@ -110,6 +111,22 @@ export class DiaryService {
           url: this.GET_DIARY_LIST_API,
           method: 'GET',
           params,
+        })
+        .then(response => {
+          return response.data;
+        });
+    } catch (e) {
+      console.error('Error fetching diaries:', e);
+      throw e; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
+    }
+  }
+
+  static async getMyDiaries(userId: number) {
+    try {
+      return await axiosInstance
+        .request<Pagination.IOffSet<Diary.Summary>>({
+          url: this.GET_MY_DIARY_LIST_API(userId),
+          method: 'GET',
         })
         .then(response => {
           return response.data;
