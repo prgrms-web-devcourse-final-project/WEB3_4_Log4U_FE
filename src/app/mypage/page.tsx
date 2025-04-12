@@ -1,6 +1,6 @@
 function MainContent() {
   return (
-    <div className="justify-items-center content-center border-r border-l border-gray-300">
+    <div className='justify-items-center content-center border-r border-l border-gray-300'>
       <p>my page</p>
     </div>
   );

@@ -1,8 +1,5 @@
-import { Diary } from "@root/types/diary";
-import { Pagination } from "@root/types/pagination";
-
 export namespace User {
-  export interface Me extends Pagination.IOffSet<Diary.Detail> {
+  export interface Me {
     userId: number;
 
     name: string;

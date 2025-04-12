@@ -1,161 +1,183 @@
-// app/diary/map/[id]/page.tsx
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { MockUtil } from "@root/utils/mock.util";
-import GoogleMapComponent from "@/app/googleMap";
-import { User } from "@root/types/user";
-import { Diary } from "@root/types/diary";
+import GoogleMapComponent from '@/app/googleMap';
+import { DiaryService } from '@root/services/diary';
+import { UserService } from '@root/services/user';
+import { Diary } from '@root/types/diary';
+import { User } from '@root/types/user';
+import Link from 'next/link';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-function MyDiaries(diaries: Diary.Detail[]) {
-  return (
-    <div className="mt-6 grid grid-cols-3 gap-4">
-      {diaries.length > 0
-        ? diaries.slice(0, 9).map((diary) => (
-            <Link
-              href={`/diaries/${diary.diaryId}`}
-              key={diary.diaryId}
-              className="block border rounded-lg overflow-hidden hover:shadow-md transition"
-            >
-              <div className="h-40 bg-gray-200 relative">
-                <img
-                  src={diary.thumbnailUrl || "/api/placeholder/300/200"}
-                  alt="다이어리 이미지"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-3 text-sm text-center text-gray-700">
-                <div>다이어리 여행,</div>
-                <div>
-                  {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
-                </div>
-              </div>
-            </Link>
-          ))
-        : // 다이어리가 없을 경우 빈 그리드 셀 9개 생성
-          Array.from({ length: 9 }).map((_, index) => (
-            <div
-              key={`empty-${index}`}
-              className="border rounded overflow-hidden aspect-square flex flex-col h-[250px]"
-            >
-              <div className="w-full flex-1 bg-gray-100"></div>
-              <div className="p-2 text-center text-sm text-gray-300 h-16 flex flex-col justify-center">
-                <p>다이어리 없음</p>
-              </div>
-            </div>
-          ))}
+// 다이어리 카드 컴포넌트
+const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
+  <Link
+    href={`/diaries/${diary.diaryId}`}
+    key={diary.diaryId}
+    className='block border rounded-lg overflow-hidden hover:shadow-md transition'
+  >
+    <div className='h-40 bg-gray-200 relative'>
+      {diary.thumbnailUrl ? (
+        <img
+          src={diary.thumbnailUrl}
+          alt='다이어리 이미지'
+          className='w-full h-full object-cover'
+        />
+      ) : (
+        <img
+          src='/diary-thumbnail-test.png'
+          alt='기본 다이어리 이미지'
+          className='w-full h-full object-cover'
+        />
+      )}
     </div>
-  );
-}
+    <div className='p-3 text-sm text-center text-gray-700'>
+      <div>다이어리 여행,</div>
+      <div>
+        {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
+      </div>
+    </div>
+  </Link>
+);
 
-export default function HomePage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [diaries, setDiaries] = useState<Diary.Detail[]>([]);
+// 빈 다이어리 카드 컴포넌트
+const EmptyDiaryCard = ({ index }: { index: number }) => (
+  <div
+    key={`empty-${index}`}
+    className='border rounded overflow-hidden aspect-square flex flex-col h-[250px]'
+  >
+    <div className='w-full flex-1 bg-gray-100'></div>
+    <div className='p-2 text-center text-sm text-gray-300 h-16 flex flex-col justify-center'>
+      <p>다이어리 없음</p>
+    </div>
+  </div>
+);
+
+export default function HomePage() {
+  const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
   const [user, setUser] = useState<User.Me | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(8);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
 
-  // 데이터 불러오기
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
+  // IntersectionObserver를 위한 ref
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastDiaryRef = useRef<HTMLDivElement | null>(null);
+
+  // 초기 데이터 로드
+  const loadDiaries = useCallback(
+    async (cursorId: number | null = null) => {
+      if (loading || (!hasMore && cursorId !== null)) return;
+
+      setLoading(true);
+
       try {
-        // 목 데이터 사용
-        // @todo: users/me 불러오도록  변경 필요.
+        // 사용자 정보 로드
+        if (!user) {
+          const userData = await UserService.getMe();
+          setUser(userData);
 
-        const user = MockUtil.IUser.Me();
-        setUser(user);
-        setDiaries(user.list);
-        setTotalPages(8);
+          // 사용자 정보를 받은 후에 다이어리 로드 (커서 기반)
+          const response = await DiaryService.getMyDiaries(userData.userId, {
+            cursorId: cursorId || undefined,
+            size: 9,
+          });
+
+          const newDiaries = response.list || [];
+          const pageInfo = response.pageInfo;
+
+          setDiaries(newDiaries);
+          setHasMore(pageInfo.hasNext);
+          setNextCursor(pageInfo.nextCursor || null);
+        } else {
+          // 이미 사용자 정보가 있는 경우 다이어리만 로드 (커서 기반)
+          const response = await DiaryService.getMyDiaries(user.userId, {
+            cursorId: cursorId || undefined,
+            size: 9,
+          });
+
+          const newDiaries = response.list || [];
+          const pageInfo = response.pageInfo;
+
+          // 첫 로드인 경우 대체, 아닌 경우 추가
+          setDiaries(prev => (cursorId ? [...prev, ...newDiaries] : newDiaries));
+
+          // 다음 페이지 여부와 커서 설정
+          setHasMore(pageInfo.hasNext);
+          setNextCursor(pageInfo.nextCursor || null);
+        }
       } catch (error) {
-        console.error("데이터 로딩 중 오류 발생:", error);
+        console.error('다이어리 로딩 중 오류 발생:', error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
+      }
+    },
+    [loading, hasMore, user]
+  );
+
+  // 초기 로드
+  useEffect(() => {
+    loadDiaries(null);
+  }, []);
+
+  // IntersectionObserver 설정
+  useEffect(() => {
+    // 이전 옵저버 정리
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    // 새 옵저버 생성
+    observerRef.current = new IntersectionObserver(
+      entries => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMore && !loading && nextCursor) {
+          loadDiaries(nextCursor);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1,
+      }
+    );
+
+    // 마지막 요소 관찰 시작
+    if (lastDiaryRef.current) {
+      observerRef.current.observe(lastDiaryRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
       }
     };
-
-    fetchData();
-  }, [params.id]);
-
-  // 페이지 변경 처리
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  // 페이지네이션 렌더링
-  const renderPagination = () => {
-    const pages = [];
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, startPage + 4);
-
-    // 이전 버튼
-    pages.push(
-      <button
-        key="prev"
-        onClick={() => handlePageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className="px-3 py-1 text-sm text-gray-600"
-      >
-        ◀ Previous
-      </button>,
-    );
-
-    // 페이지 번호들
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <button
-          key={i}
-          onClick={() => handlePageChange(i)}
-          className={`w-8 h-8 mx-1 rounded-full ${
-            i === currentPage ? "bg-gray-800 text-white" : "text-gray-600"
-          }`}
-        >
-          {i}
-        </button>,
-      );
-    }
-
-    // 다음 버튼
-    pages.push(
-      <button
-        key="next"
-        onClick={() => handlePageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1 text-sm text-gray-600"
-      >
-        Next ▶
-      </button>,
-    );
-
-    return (
-      <div className="flex items-center justify-center space-x-1 mt-4">
-        {pages}
-      </div>
-    );
-  };
+  }, [loadDiaries, hasMore, loading, nextCursor]);
 
   return (
-    <div className="flex p-4">
-      <div className="flex-1 flex flex-col overflow-auto">
+    <div className='flex p-4'>
+      <div className='flex-1 flex flex-col overflow-hidden'>
         {/* 사용자 프로필 정보 */}
-        <div className="p-6 border-b">
-          <div className="flex items-center">
-            <div className="w-20 h-20 rounded-full border overflow-hidden mr-6">
-              <img
-                src={user?.profileImage}
-                alt="프로필 이미지"
-                className="w-full h-full object-cover"
-              />
+        <div className='p-6 border-b'>
+          <div className='flex items-center'>
+            <div className='w-20 h-20 rounded-full border overflow-hidden mr-6'>
+              {user?.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt='프로필 이미지'
+                  className='w-full h-full object-cover'
+                />
+              ) : (
+                <img
+                  src='/test-profile.png'
+                  alt='기본 프로필 이미지'
+                  className='w-full h-full object-cover'
+                />
+              )}
             </div>
 
             <div>
-              <h1 className="text-xl font-bold mb-2">winter</h1>
-              <div className="flex space-x-4 text-sm">
+              <h1 className='text-xl font-bold mb-2'>{user?.name || 'winter'}</h1>
+              <div className='flex space-x-4 text-sm'>
                 <div>게시물 {user?.diaryCount || 0}</div>
                 <div>팔로워 {user?.followers || 0}</div>
                 <div>팔로잉 {user?.followings || 0}</div>
@@ -165,14 +187,14 @@ export default function HomePage({ params }: { params: { id: string } }) {
         </div>
 
         {/* 다이어리 지도 제목 */}
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-bold">다이어리 지도 - 경로 시각화</h2>
+        <div className='px-6 py-4 border-b'>
+          <h2 className='text-xl font-bold'>다이어리 지도 - 경로 시각화</h2>
         </div>
 
         {/* 구글 맵 */}
         <GoogleMapComponent
           markers={
-            user?.list.map((diary) => ({
+            diaries.map(diary => ({
               id: diary.diaryId,
               lat: diary.latitude,
               lng: diary.longitude,
@@ -182,15 +204,40 @@ export default function HomePage({ params }: { params: { id: string } }) {
           }
         ></GoogleMapComponent>
 
-        {/* 공개된 다이어리 섹션 */}
-        <div className="px-6 py-4">
-          <h3 className="text-lg font-bold mb-4">공개된 다이어리</h3>
+        {/* 공개된 다이어리 섹션 - 스크롤 가능한 별도 박스 */}
+        <div className='px-6 py-4'>
+          <h3 className='text-lg font-bold mb-4'>공개된 다이어리</h3>
 
-          {/* 다이어리 그리드 */}
-          {MyDiaries(diaries)}
+          {/* 다이어리 그리드 - 스크롤 가능한 별도 박스 */}
+          <div className='overflow-y-auto max-h-[600px] pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100'>
+            <div className='grid grid-cols-3 gap-4'>
+              {diaries.length > 0
+                ? diaries.map((diary, index) => (
+                    <div
+                      key={diary.diaryId}
+                      ref={index === diaries.length - 1 ? lastDiaryRef : null}
+                    >
+                      <DiaryCard diary={diary} />
+                    </div>
+                  ))
+                : // 다이어리가 없을 경우 빈 그리드 셀 9개 생성
+                  Array.from({ length: 9 }).map((_, index) => (
+                    <EmptyDiaryCard key={index} index={index} />
+                  ))}
+            </div>
 
-          {/* 페이지네이션 */}
-          {renderPagination()}
+            {/* 로딩 인디케이터 */}
+            {loading && (
+              <div className='flex justify-center items-center py-4'>
+                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800'></div>
+              </div>
+            )}
+
+            {/* 더 이상 불러올 데이터가 없을 때 */}
+            {!hasMore && diaries.length > 0 && (
+              <div className='text-center py-4 text-gray-500'>모든 다이어리를 불러왔습니다.</div>
+            )}
+          </div>
         </div>
       </div>
     </div>

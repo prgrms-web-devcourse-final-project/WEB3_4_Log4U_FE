@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { FC } from "react";
+import { FC } from 'react';
 
-type SSOProviderType = "naver" | "kakao" | "google";
+type SSOProviderType = 'naver' | 'kakao' | 'google';
 
-function SSOAuth(provider: "naver" | "kakao" | "google") {
-  return `oauth2/authorization/${provider}`;
+function SSOAuth(provider: 'naver' | 'kakao' | 'google') {
+  return `/oauth2/authorization/${provider}`;
 }
 
 const LoginPage: FC = () => {
@@ -17,28 +17,28 @@ const LoginPage: FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f9f3eb]">
-      <div className="max-w-sm w-full bg-white shadow-md rounded p-6">
+    <div className='min-h-screen flex items-center justify-center bg-[#f9f3eb]'>
+      <div className='max-w-sm w-full bg-white shadow-md rounded p-6'>
         {/* 로고 영역 */}
-        <h1 className="text-2xl font-bold text-center mb-6">log4U</h1>
+        <h1 className='text-2xl font-bold text-center mb-6'>log4U</h1>
 
         {/* 소셜 로그인 버튼들 */}
-        <div className="flex flex-col space-y-2">
+        <div className='flex flex-col space-y-2'>
           <button
-            onClick={() => handleSocialLogin("naver")}
-            className="bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700"
+            onClick={() => handleSocialLogin('naver')}
+            className='bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700'
           >
             네이버로 로그인
           </button>
           <button
-            onClick={() => handleSocialLogin("kakao")}
-            className="bg-yellow-400 text-black py-2 rounded font-medium hover:bg-yellow-500"
+            onClick={() => handleSocialLogin('kakao')}
+            className='bg-yellow-400 text-black py-2 rounded font-medium hover:bg-yellow-500'
           >
             카카오로 로그인
           </button>
           <button
-            onClick={() => handleSocialLogin("google")}
-            className="bg-white border border-gray-300 py-2 rounded font-medium hover:bg-gray-100"
+            onClick={() => handleSocialLogin('google')}
+            className='bg-white border border-gray-300 py-2 rounded font-medium hover:bg-gray-100'
           >
             구글로 로그인
           </button>

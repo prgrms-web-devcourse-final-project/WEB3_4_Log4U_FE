@@ -4,9 +4,7 @@ export namespace Comment {
 
     content: string;
 
-    createdAt: string;
-
-    author: {
+    author?: {
       userId: number;
 
       nickname: string;
@@ -15,5 +13,17 @@ export namespace Comment {
     };
   }
 
-  export class Detail {}
+  export interface Detail extends Summary {}
+
+  export class CreateDto {
+    diaryId!: number;
+
+    content!: string;
+  }
+
+  export class GetListCursorDto {
+    cursorCommentId?: number;
+
+    size!: number;
+  }
 }
