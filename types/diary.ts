@@ -35,18 +35,22 @@ export namespace Diary {
 
   export type SortType = (typeof SortType)[keyof typeof SortType];
 
+  export interface Location {
+    latitude: number;
+    longitude: number;
+    sido: string;
+    sigungu: string;
+    eupmyeondong: string;
+  }
+
   export interface DiaryMedia {
-    mediaId: number; // Long
-
-    originalName: string; // String
-
-    contentType: string; // String
-
-    size: number; // Long
-
-    url: string; // String
-
-    orderIndex: number; // Integer
+    mediaId: number;
+    originalName: string;
+    storedName?: string;
+    contentType: string;
+    size: number;
+    url: string;
+    orderIndex: number;
   }
 
   export interface Common {
@@ -87,18 +91,17 @@ export namespace Diary {
 
   export interface Summary extends Common {}
 
-  export interface CreateDto
-    extends Pick<
-      Diary.Detail,
-      | 'latitude'
-      | 'longitude'
-      | 'title'
-      | 'content'
-      | 'weatherInfo'
-      | 'visibility'
-      | 'thumbnailUrl'
-      | 'mediaList'
-    > {}
+  export interface CreateDto {
+    title: string;
+    content: string;
+    diaryDate: string;
+    location: Location;
+    weatherInfo: WeatherType;
+    visibility: Visibility;
+    mediaList: DiaryMedia[];
+    hashtagList: string[];
+    thumbnailUrl?: string;
+  }
 
   export interface UpdateDto extends CreateDto {}
 }

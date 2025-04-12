@@ -4,30 +4,37 @@
 import { ChangeEvent, FC, FormEvent, useEffect, useState } from 'react';
 import { Diary } from '../../../../types/diary';
 import { DiaryService } from '../../../../services/diary';
+import { MediaService } from '../../../../services/media';
+import { useRouter } from 'next/navigation';
 
 const DiaryCreatePage: FC = () => {
+  const router = useRouter();
   // 초기값: 오늘 날짜(YYYY-MM-DD)
   const today = new Date().toISOString().split('T')[0];
 
-  const [date, setDate] = useState<string>(today);
+  const [diaryDate, setDiaryDate] = useState<string>(today);
   const [weather, setWeather] = useState<Diary.WeatherType>(Diary.WeatherType.SUNNY);
-  const [time, setTime] = useState<string>('18:00');
-  const [tags, setTags] = useState<string>('#일상 #추억');
   const [visibility, setVisibility] = useState<Diary.Visibility>(Diary.Visibility.PUBLIC);
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
-  const [location, setLocation] = useState<{
-    latitude: number | null;
-    longitude: number | null;
-    error: string | null;
-  }>({
-    latitude: null,
-    longitude: null,
-    error: null,
+  const [hashtags, setHashtags] = useState<string>('');
+  const [location, setLocation] = useState<Diary.Location>({
+    latitude: 37.5665,
+    longitude: 126.978,
+    sido: '서울특별시',
+    sigungu: '중구',
+    eupmyeondong: '세종로',
   });
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [mediaList, setMediaList] = useState<Diary.DiaryMedia[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setDate(e.target.value);
+    setDiaryDate(e.target.value);
   };
 
   const handleWeatherChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -38,12 +45,8 @@ const DiaryCreatePage: FC = () => {
     }
   };
 
-  const handleTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setTime(e.target.value);
-  };
-
-  const handleTagsChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setTags(e.target.value);
+  const handleHashtagsChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setHashtags(e.target.value);
   };
 
   const handleVisibilityChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -62,53 +65,296 @@ const DiaryCreatePage: FC = () => {
     setContent(e.target.value);
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const formData: Diary.CreateDto = {
-      content: content,
-      latitude: location.latitude!,
-      longitude: location.longitude!,
-      mediaList: [],
-      title: title,
-      visibility: visibility,
-      weatherInfo: weather,
-      // @todo: 추후 수정 필요.
-      thumbnailUrl: '',
-    };
-
-    console.log('formData', formData);
+  // 역지오코딩을 통해 좌표에서 주소 정보 가져오기
+  const getAddressFromCoords = async (lat: number, lng: number) => {
+    console.log('getAddressFromCoords', lat, lng);
     try {
-      await DiaryService.createDiary(formData);
+      // 네이버 지도 API 클라이언트 ID와 Secret
+      const clientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
+      const clientSecret = process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
+        throw new Error('네이버 지도 API 키가 설정되지 않았습니다.');
+      }
+
+      // 네이버 지도 API 역지오코딩 요청
+      const response = await fetch(
+        `https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc?coords=${lng},${lat}&output=json`,
+        {
+          headers: {
+            'X-NCP-APIGW-API-KEY-ID': clientId,
+            'X-NCP-APIGW-API-KEY': clientSecret,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.status?.code === 0) {
+        // 네이버 API 응답 구조에서 필요한 데이터 추출
+        const results = data.results?.[0];
+        const region = results?.region;
+
+        // 시도, 시군구, 읍면동 추출
+        const sido = region?.area1?.name || ''; // 시/도 (서울특별시, 경기도 등)
+        const sigungu = region?.area2?.name || ''; // 시/군/구 (강남구, 성남시 등)
+        const eupmyeondong = region?.area3?.name || ''; // 읍/면/동 (역삼동, 수서동 등)
+
+        console.log('네이버 지도 API 응답:', { sido, sigungu, eupmyeondong });
+        return { sido, sigungu, eupmyeondong };
+      } else {
+        console.error('네이버 지도 API 오류:', data);
+        throw new Error('주소를 찾을 수 없습니다');
+      }
     } catch (error) {
-      console.error(error);
-      alert('서버 오류');
+      console.error('역지오코딩 오류:', error);
+
+      // 실패 시 대체 방법: 카카오 지도 API 사용 시도
+      try {
+        const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_API_KEY;
+
+        if (!kakaoApiKey) {
+          throw new Error('카카오 API 키가 설정되지 않았습니다.');
+        }
+
+        const response = await fetch(
+          `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+          {
+            headers: {
+              Authorization: `KakaoAK ${kakaoApiKey}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && data.documents && data.documents.length > 0) {
+          const address = data.documents[0].address;
+
+          // 카카오 API에서 주소 정보 추출
+          const sido = address.region_1depth_name || ''; // 시/도
+          const sigungu = address.region_2depth_name || ''; // 시/군/구
+          const eupmyeondong = address.region_3depth_name || ''; // 읍/면/동
+
+          console.log('카카오 지도 API 응답:', { sido, sigungu, eupmyeondong });
+          return { sido, sigungu, eupmyeondong };
+        }
+      } catch (kakaoError) {
+        console.error('카카오 지도 API 오류:', kakaoError);
+      }
+
+      // 모든 API가 실패하면 원래 오류 전달
+      throw error;
     }
   };
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            error: null,
-          });
-        },
-        error => {
-          setLocation(prev => ({
-            ...prev,
-            error: error.message,
-          }));
-        }
-      );
-    } else {
-      setLocation(prev => ({
-        ...prev,
-        error: 'Geolocation is not supported by this browser.',
-      }));
+  // 위치 정보 새로고침
+  const refreshLocation = async () => {
+    console.log('refreshLocation');
+    setIsLoadingLocation(true);
+    setLocationError(null);
+
+    try {
+      // 안전한 출처 확인 (localhost, 127.0.0.1, 또는 특정 EC2 도메인)
+      const isSecure =
+        window.location.protocol === 'https:' ||
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname.includes(
+          'ec2-13-209-127-186.ap-northeast-2.compute.amazonaws.com'
+        );
+
+      if (!isSecure) {
+        throw new Error(
+          '위치 정보는 보안 연결(HTTPS) 또는 허용된 도메인에서만 사용할 수 있습니다.'
+        );
+      }
+
+      console.log('navigator.geolocation', navigator.geolocation);
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        });
+      });
+      console.log('navigator.position', position);
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      // TODO: 역지오코딩 API 응답 실패 시 임시 데이터 사용
+      try {
+        // 역지오코딩으로 주소 가져오기
+        const address = await getAddressFromCoords(lat, lng);
+
+        setLocation({
+          latitude: lat,
+          longitude: lng,
+          sido: address.sido || '알 수 없음',
+          sigungu: address.sigungu || '알 수 없음',
+          eupmyeondong: address.eupmyeondong || '알 수 없음',
+        });
+      } catch (geoError) {
+        console.error('역지오코딩 오류:', geoError);
+        // 위치는 가져왔지만 주소 변환 실패 시
+        setLocation({
+          latitude: lat,
+          longitude: lng,
+          sido: '알 수 없음',
+          sigungu: '알 수 없음',
+          eupmyeondong: '알 수 없음',
+        });
+        setLocationError('주소 정보를 가져오는데 실패했습니다. 위치 좌표만 기록됩니다.');
+      }
+    } catch (error) {
+      console.error('위치 정보 가져오기 실패:', error);
+      if (error instanceof Error) {
+        setLocationError(
+          // error.message || '위치 정보를 가져오는데 실패했습니다. 권한을 확인해주세요.'
+          error.message || '위치 .'
+        );
+      } else {
+        setLocationError('위치.');
+      }
+    } finally {
+      setIsLoadingLocation(false);
     }
+  };
+
+  // 수동으로 위치 정보 입력 핸들러
+  const handleManualLocationChange = (
+    e: ChangeEvent<HTMLInputElement>,
+    field: 'sido' | 'sigungu' | 'eupmyeondong'
+  ) => {
+    setLocation(prev => ({
+      ...prev,
+      [field]: e.target.value,
+    }));
+  };
+
+  // S3에 파일 업로드 핸들러
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    setIsSubmitting(true);
+    setIsUploading(true);
+    setErrorMessage('');
+    const files = Array.from(e.target.files);
+    const newMediaItems: Diary.DiaryMedia[] = [];
+
+    // 진행 상태 초기화
+    const initialProgress: { [key: string]: number } = {};
+    files.forEach(file => {
+      initialProgress[file.name] = 0;
+    });
+    setUploadProgress(initialProgress);
+
+    try {
+      // 각 파일에 대해 순차적으로 처리
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const originalName = file.name;
+        const contentType = file.type;
+        const size = file.size;
+        const orderIndex = mediaList.length + i;
+        const fileId = `${Date.now()}-${i}-${originalName}`;
+
+        // 1. 백엔드에서 presigned URL 요청
+        const { presignedUrl, fileUrl, mediaId } = await MediaService.getPresignedUrl(
+          originalName,
+          contentType
+        );
+
+        // 2. S3에 파일 업로드 (진행 상태 추적)
+        await MediaService.uploadFileToS3(presignedUrl, file, fileId, (fileId, progress) => {
+          setUploadProgress(prev => ({
+            ...prev,
+            [fileId]: progress,
+          }));
+        });
+
+        // 3. 미디어 아이템 생성
+        const mediaItem: Diary.DiaryMedia = {
+          mediaId,
+          originalName,
+          contentType,
+          size,
+          url: fileUrl,
+          orderIndex,
+        };
+
+        newMediaItems.push(mediaItem);
+      }
+
+      // 모든 업로드가 성공하면 상태 업데이트
+      setMediaList(prev => [...prev, ...newMediaItems]);
+    } catch (error) {
+      console.error('파일 업로드 중 오류 발생:', error);
+      setErrorMessage('파일 업로드 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsUploading(false);
+      setIsSubmitting(false);
+      // 파일 선택 초기화
+      if (e.target) {
+        e.target.value = '';
+      }
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      // 해시태그 처리 (# 제거 및 공백 제거)
+      const hashtagList = hashtags
+        .split('#')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+
+      const formData: Diary.CreateDto = {
+        title,
+        content,
+        diaryDate,
+        location,
+        weatherInfo: weather,
+        visibility,
+        mediaList,
+        hashtagList,
+      };
+
+      await DiaryService.createDiary(formData);
+      // 성공 시 다이어리 목록 페이지로 이동
+      router.push('/diaries');
+    } catch (error) {
+      console.error('다이어리 생성 중 오류 발생:', error);
+      setErrorMessage('다이어리 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 위치 정보 가져오기
+  useEffect(() => {
+    // 안전한 출처 확인 업데이트
+    const isSecure =
+      window.location.protocol === 'https:' ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.includes('ec2-13-209-127-186.ap-northeast-2.compute.amazonaws.com');
+
+    if (!isSecure) {
+      setLocationError(
+        '보안 연결(HTTPS)이 아니어서 위치 정보를 자동으로 가져올 수 없습니다. 수동으로 입력해주세요.'
+      );
+      return;
+    }
+
+    refreshLocation().catch(err => {
+      console.error('자동 위치 정보 가져오기 실패:', err);
+    });
   }, []);
 
   return (
@@ -116,68 +362,133 @@ const DiaryCreatePage: FC = () => {
       onSubmit={handleSubmit}
       className='max-w-md mx-auto my-8 border border-gray-300 rounded p-4 bg-white'
     >
+      {errorMessage && (
+        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
+          {errorMessage}
+        </div>
+      )}
+
       {/* 날짜 선택 */}
       <div className='text-center mb-6'>
         <label className='block text-lg font-semibold mb-2'>날짜</label>
         <input
           type='date'
-          value={date}
+          value={diaryDate}
           onChange={handleDateChange}
           className='mx-auto border border-gray-300 rounded p-2'
+          required
         />
       </div>
 
-      {/* 날씨 & 시간 선택 */}
-      <div className='grid grid-cols-2 gap-4 mb-4'>
-        <div className='flex flex-col items-center'>
-          <label className='mb-1'>날씨</label>
-          <select
-            value={weather}
-            onChange={handleWeatherChange}
-            className='border border-gray-300 rounded p-2'
-          >
-            <option value={Diary.WeatherType.SUNNY}>☀️ 맑음</option>
-            <option value={Diary.WeatherType.CLOUDY}>☁️ 흐림</option>
-            <option value={Diary.WeatherType.RAINY}>🌧️ 비</option>
-            <option value={Diary.WeatherType.SNOWY}>❄️ 눈</option>
-          </select>
-        </div>
-        <div className='flex flex-col items-center'>
-          <label className='mb-1'>시간</label>
-          <input
-            type='time'
-            value={time}
-            onChange={handleTimeChange}
-            className='border border-gray-300 rounded p-2'
-          />
-        </div>
+      {/* 날씨 선택 */}
+      <div className='mb-4'>
+        <label className='block mb-1'>날씨</label>
+        <select
+          value={weather}
+          onChange={handleWeatherChange}
+          className='w-full border border-gray-300 rounded p-2'
+          required
+        >
+          <option value={Diary.WeatherType.SUNNY}>☀️ 맑음</option>
+          <option value={Diary.WeatherType.CLOUDY}>☁️ 흐림</option>
+          <option value={Diary.WeatherType.RAINY}>🌧️ 비</option>
+          <option value={Diary.WeatherType.SNOWY}>❄️ 눈</option>
+        </select>
       </div>
 
-      {/* 위치 & 태그 선택 */}
-      <div className='grid grid-cols-2 gap-4 mb-4'>
-        <div>
-          <label className='block mb-1'>위치</label>
-          <select
-            // value={location}
-            // onChange={handleLocationChange}
-            className='w-full border bord
-            er-gray-300 rounded p-2'
+      {/* 위치 정보 표시 */}
+      <div className='mb-4'>
+        <div className='flex justify-between items-center mb-1'>
+          <label className='block'>현재 위치</label>
+          <button
+            type='button'
+            onClick={refreshLocation}
+            className='text-xs text-blue-500 hover:text-blue-700'
+            disabled={isLoadingLocation}
           >
-            <option value='서울특별시 강남구'>서울특별시 강남구</option>
-            <option value='서울특별시 종로구'>서울특별시 종로구</option>
-            <option value='부산광역시 해운대구'>부산광역시 해운대구</option>
-          </select>
+            {isLoadingLocation ? '갱신 중...' : '위치 갱신'}
+          </button>
         </div>
-        <div>
-          <label className='block mb-1'>태그</label>
-          <input
-            type='text'
-            value={tags}
-            onChange={handleTagsChange}
-            placeholder='#일상 #추억'
-            className='w-full border border-gray-300 rounded p-2'
-          />
-        </div>
+
+        {locationError ? (
+          <div>
+            <div className='p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm mb-2'>
+              {locationError}
+              <div className='mt-1'>
+                <button
+                  type='button'
+                  onClick={refreshLocation}
+                  className='text-xs text-blue-500 hover:text-blue-700 mr-2'
+                >
+                  다시 시도
+                </button>
+              </div>
+            </div>
+
+            {/* 수동 위치 입력 폼 */}
+            <div className='p-2 border border-gray-200 rounded'>
+              <p className='text-sm font-medium mb-2'>위치 정보 직접 입력</p>
+              <div className='grid grid-cols-1 gap-2'>
+                <div>
+                  <label className='block text-xs text-gray-600 mb-1'>시/도</label>
+                  <input
+                    type='text'
+                    value={location.sido}
+                    onChange={e => handleManualLocationChange(e, 'sido')}
+                    className='w-full border border-gray-300 rounded p-1 text-sm'
+                    placeholder='예: 서울특별시'
+                  />
+                </div>
+                <div>
+                  <label className='block text-xs text-gray-600 mb-1'>시/군/구</label>
+                  <input
+                    type='text'
+                    value={location.sigungu}
+                    onChange={e => handleManualLocationChange(e, 'sigungu')}
+                    className='w-full border border-gray-300 rounded p-1 text-sm'
+                    placeholder='예: 강남구'
+                  />
+                </div>
+                <div>
+                  <label className='block text-xs text-gray-600 mb-1'>읍/면/동</label>
+                  <input
+                    type='text'
+                    value={location.eupmyeondong}
+                    onChange={e => handleManualLocationChange(e, 'eupmyeondong')}
+                    className='w-full border border-gray-300 rounded p-1 text-sm'
+                    placeholder='예: 역삼동'
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : isLoadingLocation ? (
+          <div className='p-2 bg-gray-50 border border-gray-200 rounded'>
+            <p className='text-gray-500 text-sm'>위치 정보를 가져오는 중...</p>
+          </div>
+        ) : (
+          <div className='p-2 bg-gray-50 border border-gray-200 rounded'>
+            <p className='text-gray-700 font-medium'>
+              {location.sido} {location.sigungu} {location.eupmyeondong}
+            </p>
+            <p className='text-xs text-gray-500 mt-1'>
+              위도: {location.latitude.toFixed(6)}, 경도: {location.longitude.toFixed(6)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 해시태그 입력 */}
+      <div className='mb-4'>
+        <label className='block mb-1'>해시태그</label>
+        <input
+          type='text'
+          value={hashtags}
+          onChange={handleHashtagsChange}
+          placeholder='#여행 #맛집'
+          className='w-full border border-gray-300 rounded p-2'
+        />
+        <div className='text-xs text-gray-500 mt-1'>해시태그는 #으로 구분하여 입력해주세요.</div>
       </div>
 
       {/* 공개대상 선택 */}
@@ -187,10 +498,11 @@ const DiaryCreatePage: FC = () => {
           value={visibility}
           onChange={handleVisibilityChange}
           className='w-full border border-gray-300 rounded p-2'
+          required
         >
-          <option value='전체'>전체</option>
-          <option value='비공개'>비공개</option>
-          <option value='팔로워만'>팔로워만</option>
+          <option value={Diary.Visibility.PUBLIC}>전체 공개</option>
+          <option value={Diary.Visibility.PRIVATE}>비공개</option>
+          <option value={Diary.Visibility.FOLLOWER}>팔로워만</option>
         </select>
       </div>
 
@@ -200,32 +512,163 @@ const DiaryCreatePage: FC = () => {
         type='text'
         value={title}
         onChange={handleTitleChange}
-        placeholder='제목'
+        placeholder='제목을 입력하세요'
         className='w-full border border-gray-300 rounded p-2 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500'
+        required
       />
 
-      {/* 작성 영역 */}
-      <div className='mb-2 font-medium'>작성</div>
+      {/* 내용 입력 */}
+      <div className='mb-2 font-medium'>내용</div>
       <textarea
         value={content}
         onChange={handleContentChange}
-        placeholder='작성...'
+        placeholder='내용을 입력하세요...'
         className='w-full border border-gray-300 rounded p-2 mb-6 h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500'
+        required
       />
+
+      {/* 미디어 목록 표시 */}
+      {mediaList.length > 0 && (
+        <div className='mb-4'>
+          <div className='font-medium mb-2'>첨부된 파일 ({mediaList.length})</div>
+          <div className='grid grid-cols-3 gap-2'>
+            {mediaList.map((media, index) => (
+              <div key={index} className='border rounded p-1 relative'>
+                {media.contentType.startsWith('image/') ? (
+                  <img
+                    src={media.url}
+                    alt={media.originalName}
+                    className='w-full h-20 object-cover'
+                  />
+                ) : (
+                  <div className='w-full h-20 bg-gray-100 flex items-center justify-center text-xs text-center p-1'>
+                    {media.originalName}
+                  </div>
+                )}
+                <button
+                  type='button'
+                  onClick={() => setMediaList(mediaList.filter((_, i) => i !== index))}
+                  className='absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs'
+                  aria-label='파일 삭제'
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 업로드 진행 상태 표시 */}
+      {isUploading && Object.keys(uploadProgress).length > 0 && (
+        <div className='mb-4 border rounded p-3 bg-gray-50'>
+          <div className='font-medium mb-2 text-sm'>파일 업로드 중...</div>
+          {Object.entries(uploadProgress).map(([fileName, progress]) => (
+            <div key={fileName} className='mb-2'>
+              <div className='flex justify-between text-xs mb-1'>
+                <span className='truncate'>{fileName}</span>
+                <span>{progress}%</span>
+              </div>
+              <div className='w-full bg-gray-200 rounded-full h-2'>
+                <div
+                  className='bg-blue-500 h-2 rounded-full'
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 하단 버튼 영역 */}
       <div className='flex justify-between'>
-        <button
-          type='button'
-          className='px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 text-sm'
+        <label
+          className={`px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 text-sm cursor-pointer flex items-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          파일 첨부
-        </button>
+          {isSubmitting ? (
+            <>
+              <svg
+                className='animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                ></circle>
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                ></path>
+              </svg>
+              업로드 중...
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='h-4 w-4 mr-1'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M12 4v16m8-8H4'
+                />
+              </svg>
+              파일 첨부
+            </>
+          )}
+          <input
+            type='file'
+            onChange={handleFileUpload}
+            multiple
+            className='hidden'
+            accept='image/*,video/*'
+            disabled={isSubmitting}
+          />
+        </label>
         <button
           type='submit'
-          className='px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm'
+          disabled={isSubmitting}
+          className='px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm disabled:bg-blue-300 flex items-center'
         >
-          완료
+          {isSubmitting ? (
+            <>
+              <svg
+                className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                ></circle>
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                ></path>
+              </svg>
+              처리 중...
+            </>
+          ) : (
+            '작성 완료'
+          )}
         </button>
       </div>
     </form>
