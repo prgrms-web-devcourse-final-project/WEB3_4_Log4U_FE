@@ -10,7 +10,9 @@ import Link from 'next/link';
 export default function MyPage() {
   const [user, setUser] = useState<User.Me | null>(null);
   const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
+  const [likedDiaries, setLikedDiaries] = useState<Diary.Summary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('myDiaries');
 
   useEffect(() => {
@@ -20,10 +22,19 @@ export default function MyPage() {
         setUser(userData);
 
         if (userData) {
+          // 내 다이어리 로드
           const diaryResponse = await DiaryService.getMyDiaries(userData.userId, {
             size: 9,
           });
           setDiaries(diaryResponse.list || []);
+
+          // 좋아요한 다이어리도 함께 로드
+          try {
+            const likedResponse = await DiaryService.getLikedDiaries();
+            setLikedDiaries(likedResponse.list || []);
+          } catch (likedError) {
+            console.error('좋아요한 다이어리를 불러오는 중 오류 발생:', likedError);
+          }
         }
       } catch (error) {
         console.error('사용자 데이터를 불러오는 중 오류 발생:', error);
@@ -34,6 +45,25 @@ export default function MyPage() {
 
     fetchUserData();
   }, []);
+
+  // 탭 변경 시 데이터 로드
+  useEffect(() => {
+    const fetchTabData = async () => {
+      if (activeTab === 'liked' && likedDiaries.length === 0) {
+        setTabLoading(true);
+        try {
+          const response = await DiaryService.getLikedDiaries();
+          setLikedDiaries(response.list || []);
+        } catch (error) {
+          console.error('좋아요한 다이어리를 불러오는 중 오류 발생:', error);
+        } finally {
+          setTabLoading(false);
+        }
+      }
+    };
+
+    fetchTabData();
+  }, [activeTab, likedDiaries.length]);
 
   // 다이어리 카드 컴포넌트
   const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
@@ -133,8 +163,8 @@ export default function MyPage() {
             <div className='text-gray-600'>팔로잉</div>
           </div>
           <div className='text-center'>
-            <div className='text-2xl font-semibold'>{0}</div>
-            <div className='text-gray-600'>댓글</div>
+            <div className='text-2xl font-semibold'>{likedDiaries.length || 0}</div>
+            <div className='text-gray-600'>좋아요</div>
           </div>
         </div>
       </div>
@@ -173,33 +203,52 @@ export default function MyPage() {
 
       {/* 다이어리 그리드 */}
       <div className='p-8'>
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {activeTab === 'myDiaries' && (
-            <>
-              <Link
-                href='/diaries/create'
-                className='border border-dashed rounded-lg overflow-hidden hover:shadow-md transition'
-              >
-                <EmptyDiaryCard />
-              </Link>
-              {diaries.map(diary => (
-                <DiaryCard key={diary.diaryId} diary={diary} />
-              ))}
-            </>
-          )}
+        {/* 탭 로딩 인디케이터 */}
+        {tabLoading && (
+          <div className='flex justify-center items-center py-10'>
+            <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500'></div>
+          </div>
+        )}
 
-          {activeTab === 'liked' && (
-            <div className='col-span-3 py-16 text-center text-gray-500'>
-              아직 좋아요한 다이어리가 없습니다.
-            </div>
-          )}
+        {!tabLoading && (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {activeTab === 'myDiaries' && (
+              <>
+                <Link
+                  href='/diaries/create'
+                  className='border border-dashed rounded-lg overflow-hidden hover:shadow-md transition'
+                >
+                  <EmptyDiaryCard />
+                </Link>
+                {diaries.length > 0 ? (
+                  diaries.map(diary => <DiaryCard key={diary.diaryId} diary={diary} />)
+                ) : (
+                  <div className='col-span-3 py-10 text-center text-gray-500'>
+                    작성한 다이어리가 없습니다.
+                  </div>
+                )}
+              </>
+            )}
 
-          {activeTab === 'saved' && (
-            <div className='col-span-3 py-16 text-center text-gray-500'>
-              아직 저장한 다이어리가 없습니다.
-            </div>
-          )}
-        </div>
+            {activeTab === 'liked' && (
+              <>
+                {likedDiaries.length > 0 ? (
+                  likedDiaries.map(diary => <DiaryCard key={diary.diaryId} diary={diary} />)
+                ) : (
+                  <div className='col-span-3 py-10 text-center text-gray-500'>
+                    좋아요한 다이어리가 없습니다.
+                  </div>
+                )}
+              </>
+            )}
+
+            {activeTab === 'saved' && (
+              <div className='col-span-3 py-16 text-center text-gray-500'>
+                아직 저장한 다이어리가 없습니다.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 추가 섹션: 최근 활동 */}
