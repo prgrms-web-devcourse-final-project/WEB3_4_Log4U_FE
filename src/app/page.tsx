@@ -30,10 +30,39 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
         />
       )}
     </div>
-    <div className='p-3 text-sm text-center text-gray-700'>
-      <div>다이어리 여행,</div>
-      <div>
-        {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
+    <div className='p-3 text-sm'>
+      {/* 다이어리 제목 */}
+      <h3 className='font-bold text-gray-800 truncate mb-1'>{diary.title || '제목 없음'}</h3>
+
+      {/* 작성자 정보 */}
+      <div className='flex items-center mb-2'>
+        {diary.authorProfileImage && (
+          <div className='w-4 h-4 rounded-full overflow-hidden mr-1'>
+            <img
+              src={diary.authorProfileImage}
+              alt={`${diary.authorNickname}의 프로필`}
+              className='w-full h-full object-cover'
+            />
+          </div>
+        )}
+        <span className='text-xs text-gray-600'>{diary.authorNickname || '작성자 정보 없음'}</span>
+      </div>
+
+      {/* 위치 및 날씨 정보 */}
+      <div className='text-xs text-gray-600 mb-1'>
+        {diary.dongmyun || '위치 정보 없음'}, {Diary.WeatherMap[diary.weatherInfo]}
+      </div>
+
+      {/* 좋아요 수 */}
+      <div className='flex items-center text-xs text-gray-600'>
+        <svg className='w-3 h-3 mr-1 text-red-500' fill='currentColor' viewBox='0 0 20 20'>
+          <path
+            fillRule='evenodd'
+            d='M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z'
+            clipRule='evenodd'
+          />
+        </svg>
+        <span>{diary.likeCount || 0}</span>
       </div>
     </div>
   </Link>
@@ -43,11 +72,32 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
 const EmptyDiaryCard = ({ index }: { index: number }) => (
   <div
     key={`empty-${index}`}
-    className='border rounded overflow-hidden aspect-square flex flex-col h-[250px]'
+    className='block border rounded-lg overflow-hidden hover:shadow-md transition'
   >
-    <div className='w-full flex-1 bg-gray-100'></div>
-    <div className='p-2 text-center text-sm text-gray-300 h-16 flex flex-col justify-center'>
-      <p>다이어리 없음</p>
+    <div className='h-40 bg-gray-100'></div>
+    <div className='p-3 text-sm'>
+      {/* 다이어리 제목 */}
+      <h3 className='font-bold text-gray-300 truncate mb-1'>제목 없음</h3>
+
+      {/* 작성자 정보 */}
+      <div className='flex items-center mb-2'>
+        <span className='text-xs text-gray-300'>작성자 정보 없음</span>
+      </div>
+
+      {/* 위치 및 날씨 정보 */}
+      <div className='text-xs text-gray-300 mb-1'>위치 정보 없음</div>
+
+      {/* 좋아요 수 */}
+      <div className='flex items-center text-xs text-gray-300'>
+        <svg className='w-3 h-3 mr-1 text-gray-300' fill='currentColor' viewBox='0 0 20 20'>
+          <path
+            fillRule='evenodd'
+            d='M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z'
+            clipRule='evenodd'
+          />
+        </svg>
+        <span>0</span>
+      </div>
     </div>
   </div>
 );
