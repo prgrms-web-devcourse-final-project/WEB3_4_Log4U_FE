@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { UserService } from '@root/services/user';
 import { DiaryService } from '@root/services/diary';
+import { FollowService } from '@root/services/follow';
 import { User } from '@root/types/user';
 import { Diary } from '@root/types/diary';
 import Link from 'next/link';
+import FollowModal from './components/FollowModal';
 
 export default function MyPage() {
   const [user, setUser] = useState<User.Me | null>(null);
@@ -14,6 +16,12 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('myDiaries');
+  // 모달 상태
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: '',
+    isFollowers: true,
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -64,6 +72,46 @@ export default function MyPage() {
 
     fetchTabData();
   }, [activeTab, likedDiaries.length]);
+
+  // 모달 닫기
+  const closeModal = () => {
+    setModalState(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // 팔로워 모달 열기
+  const openFollowersModal = () => {
+    setModalState({
+      isOpen: true,
+      title: '팔로워',
+      isFollowers: true,
+    });
+  };
+
+  // 팔로잉 모달 열기
+  const openFollowingsModal = () => {
+    setModalState({
+      isOpen: true,
+      title: '팔로잉',
+      isFollowers: false,
+    });
+  };
+
+  // 언팔로우 처리
+  const handleUnfollow = async (nickname: string) => {
+    try {
+      await FollowService.unfollow(nickname);
+      // 카운트 업데이트
+      if (user) {
+        setUser({
+          ...user,
+          followings: Math.max(0, user.followings - 1),
+        });
+      }
+    } catch (error) {
+      console.error('언팔로우 실패:', error);
+      throw error;
+    }
+  };
 
   // 다이어리 카드 컴포넌트
   const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
@@ -154,11 +202,17 @@ export default function MyPage() {
             <div className='text-2xl font-semibold'>{user?.diaryCount || 0}</div>
             <div className='text-gray-600'>다이어리</div>
           </div>
-          <div className='text-center'>
+          <div
+            className='text-center cursor-pointer hover:text-blue-500 transition'
+            onClick={openFollowersModal}
+          >
             <div className='text-2xl font-semibold'>{user?.followers || 0}</div>
             <div className='text-gray-600'>팔로워</div>
           </div>
-          <div className='text-center'>
+          <div
+            className='text-center cursor-pointer hover:text-blue-500 transition'
+            onClick={openFollowingsModal}
+          >
             <div className='text-2xl font-semibold'>{user?.followings || 0}</div>
             <div className='text-gray-600'>팔로잉</div>
           </div>
@@ -269,6 +323,15 @@ export default function MyPage() {
           )}
         </div>
       </div>
+
+      {/* 팔로워/팔로잉 모달 */}
+      <FollowModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        isFollowers={modalState.isFollowers}
+        onUnfollow={handleUnfollow}
+      />
     </div>
   );
 }
