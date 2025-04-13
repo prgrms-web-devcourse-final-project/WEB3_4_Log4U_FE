@@ -168,7 +168,7 @@ const FollowModal: React.FC<FollowModalProps> = ({
             <div className='text-center py-8' style={{ color: 'var(--color-text)' }}>
               {searchTerm
                 ? '검색 결과가 없습니다.'
-                : `${isFollowers ? '팔로워' : '팔로잉'}가 없습니다.`}
+                : `${isFollowers ? '팔로워' : '팔로잉'} 중인 유저가 없습니다.`}
             </div>
           ) : (
             <ul className='divide-y' style={{ borderColor: 'var(--color-secondary)' }}>
