@@ -156,7 +156,7 @@ const FollowModal: React.FC<FollowModalProps> = ({
         </div>
 
         {/* 목록 영역 */}
-        <div className='flex-1 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto min-h-[300px]'>
           {loading ? (
             <div className='flex justify-center items-center py-8'>
               <div
