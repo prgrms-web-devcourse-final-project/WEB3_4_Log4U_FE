@@ -3,10 +3,12 @@
 import GoogleMapComponent from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
 import { UserService } from '@root/services/user';
+import { FollowService } from '@root/services/follow';
 import { Diary } from '@root/types/diary';
 import { User } from '@root/types/user';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import FollowModal from './mypage/components/FollowModal';
 
 // 다이어리 카드 컴포넌트
 const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
@@ -58,6 +60,13 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
+
+  // 팔로우 모달 상태
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: '',
+    isFollowers: true,
+  });
 
   // IntersectionObserver를 위한 ref
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -153,6 +162,46 @@ export default function HomePage() {
     };
   }, [loadDiaries, hasMore, loading, nextCursor]);
 
+  // 모달 닫기
+  const closeModal = () => {
+    setModalState(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // 팔로워 모달 열기
+  const openFollowersModal = () => {
+    setModalState({
+      isOpen: true,
+      title: '팔로워',
+      isFollowers: true,
+    });
+  };
+
+  // 팔로잉 모달 열기
+  const openFollowingsModal = () => {
+    setModalState({
+      isOpen: true,
+      title: '팔로잉',
+      isFollowers: false,
+    });
+  };
+
+  // 언팔로우 처리
+  const handleUnfollow = async (nickname: string) => {
+    try {
+      await FollowService.unfollow(nickname);
+      // 카운트 업데이트
+      if (user) {
+        setUser({
+          ...user,
+          followings: Math.max(0, user.followings - 1),
+        });
+      }
+    } catch (error) {
+      console.error('언팔로우 실패:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className='flex p-4'>
       <div className='flex-1 flex flex-col overflow-hidden'>
@@ -179,8 +228,18 @@ export default function HomePage() {
               <h1 className='text-xl font-bold mb-2'>{user?.name || 'winter'}</h1>
               <div className='flex space-x-4 text-sm'>
                 <div>게시물 {user?.diaryCount || 0}</div>
-                <div>팔로워 {user?.followers || 0}</div>
-                <div>팔로잉 {user?.followings || 0}</div>
+                <div
+                  className='cursor-pointer hover:text-blue-500 transition'
+                  onClick={openFollowersModal}
+                >
+                  팔로워 {user?.followers || 0}
+                </div>
+                <div
+                  className='cursor-pointer hover:text-blue-500 transition'
+                  onClick={openFollowingsModal}
+                >
+                  팔로잉 {user?.followings || 0}
+                </div>
               </div>
             </div>
           </div>
@@ -240,6 +299,15 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* 팔로워/팔로잉 모달 */}
+      <FollowModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        isFollowers={modalState.isFollowers}
+        onUnfollow={handleUnfollow}
+      />
     </div>
   );
 }
