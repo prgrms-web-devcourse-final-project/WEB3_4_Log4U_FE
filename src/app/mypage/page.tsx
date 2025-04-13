@@ -29,6 +29,8 @@ export default function MyPage() {
   // 문의 내역 데이터
   const [supports, setSupports] = useState<Support.ISummary[]>([]);
   const [loadingSupports, setLoadingSupports] = useState(false);
+  const [selectedSupport, setSelectedSupport] = useState<Support.IDetail | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   // 문의하기 모달 상태
   const [supportModalOpen, setSupportModalOpen] = useState(false);
@@ -133,6 +135,18 @@ export default function MyPage() {
     }
   };
 
+  // 문의 내역 상세 조회
+  const handleViewSupportDetail = async (supportId: number) => {
+    try {
+      const detail = await SupportService.getSupport(supportId);
+      setSelectedSupport(detail);
+      setDetailModalOpen(true);
+    } catch (error) {
+      console.error('문의 상세 정보를 불러오는 데 실패했습니다:', error);
+      alert('문의 상세 정보를 불러오는 데 실패했습니다.');
+    }
+  };
+
   // 문의 등록 성공 시 실행할 함수
   const handleSupportSuccess = async () => {
     // 문의 목록 새로고침
@@ -190,24 +204,163 @@ export default function MyPage() {
     </div>
   );
 
-  // 문의 내역 아이템 컴포넌트
-  const SupportItem = ({ support }: { support: Support.ISummary }) => (
-    <div className='border rounded-lg overflow-hidden mb-4 hover:shadow-md transition'>
-      <div className='px-4 py-3 bg-gray-50 flex justify-between items-center'>
-        <div className='flex items-center'>
+  // 문의 아이템 컴포넌트
+  const SupportItem = ({ support }: { support: Support.ISummary }) => {
+    // 문의 유형에 따른 스타일 변경
+    const getTypeStyle = () => {
+      switch (support.supportType) {
+        case Support.Type.TECHNICAL_ISSUE:
+          return { color: '#3498DB' }; // 기술적 문제는 파란색
+        case Support.Type.ACCOUNT_ISSUE:
+          return { color: '#9B59B6' }; // 계정 문제는 보라색
+        case Support.Type.FEATURE_REQUEST:
+          return { color: '#2ECC71' }; // 기능 요청은 초록색
+        case Support.Type.SECURITY_CONCERN:
+          return { color: '#E74C3C' }; // 보안 문제는 빨간색
+        default:
+          return { color: 'var(--color-text)' };
+      }
+    };
+
+    // 답변 상태에 따른 배지 생성
+    const getStatusBadge = () => {
+      if (support.answered) {
+        return (
           <span
-            className={`inline-block w-2 h-2 rounded-full mr-2 ${
-              support.answered ? 'bg-green-500' : 'bg-yellow-500'
-            }`}
-          ></span>
-          <h3 className='font-medium'>{support.title}</h3>
-        </div>
-        <span className='text-sm text-gray-500'>
-          {new Date(support.createdAt).toLocaleDateString()}
+            className='inline-block px-2 py-1 text-xs rounded-full ml-2'
+            style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+          >
+            답변완료
+          </span>
+        );
+      }
+      return (
+        <span
+          className='inline-block px-2 py-1 text-xs rounded-full ml-2'
+          style={{ backgroundColor: '#888', color: 'white' }}
+        >
+          대기중
         </span>
+      );
+    };
+
+    return (
+      <div
+        onClick={() => handleViewSupportDetail(support.id)}
+        className='border rounded-lg p-4 mb-4 hover:shadow-md transition-shadow cursor-pointer'
+        style={{ borderColor: 'var(--color-secondary)', backgroundColor: 'var(--color-neutral)' }}
+      >
+        <div className='flex justify-between items-start'>
+          <div className='flex-1'>
+            <h4 className='font-medium text-lg' style={{ color: 'var(--color-primary)' }}>
+              {support.title}
+              {getStatusBadge()}
+            </h4>
+            <p className='text-sm mt-1' style={getTypeStyle()}>
+              {Support.TypeMap[support.supportType]}
+            </p>
+          </div>
+          <div className='text-sm' style={{ color: 'var(--color-text)' }}>
+            {new Date(support.createdAt).toLocaleDateString()}
+          </div>
+        </div>
+        {/* 미리보기 내용은 ISummary에 없어서 제거 */}
       </div>
-    </div>
-  );
+    );
+  };
+
+  // 문의 상세 모달 컴포넌트
+  const SupportDetailModal = () => {
+    if (!selectedSupport) return null;
+
+    // answerContent와 answeredAt이 있는지 확인
+    const hasAnswer = selectedSupport.answerContent && selectedSupport.answeredAt;
+
+    return (
+      <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'>
+        <div
+          className='rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border-2'
+          style={{ backgroundColor: 'var(--color-neutral)', borderColor: 'var(--color-primary)' }}
+        >
+          {/* 모달 헤더 */}
+          <div
+            className='border-b px-5 py-4 flex items-center justify-between'
+            style={{ borderColor: 'var(--color-secondary)' }}
+          >
+            <div>
+              <h3 className='text-xl font-semibold' style={{ color: 'var(--color-primary)' }}>
+                {selectedSupport.title}
+              </h3>
+              <p className='text-sm mt-1' style={{ color: 'var(--color-text)' }}>
+                {Support.TypeMap[selectedSupport.supportType]} ·
+                {new Date(selectedSupport.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+            <button
+              onClick={() => setDetailModalOpen(false)}
+              className='hover:opacity-75'
+              style={{ color: 'var(--color-primary)' }}
+            >
+              <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth='2'
+                  d='M6 18L18 6M6 6l12 12'
+                ></path>
+              </svg>
+            </button>
+          </div>
+
+          {/* 모달 본문 */}
+          <div className='flex-1 overflow-y-auto p-5'>
+            <div className='mb-6'>
+              <h4 className='font-medium mb-2' style={{ color: 'var(--color-primary)' }}>
+                문의 내용
+              </h4>
+              <div
+                className='bg-white p-4 rounded-lg border'
+                style={{ borderColor: 'var(--color-secondary)' }}
+              >
+                <p style={{ color: 'var(--color-text)' }}>{selectedSupport.content}</p>
+              </div>
+            </div>
+
+            {hasAnswer && (
+              <div>
+                <h4 className='font-medium mb-2' style={{ color: 'var(--color-primary)' }}>
+                  답변
+                </h4>
+                <div
+                  className='bg-white p-4 rounded-lg border'
+                  style={{ borderColor: 'var(--color-secondary)' }}
+                >
+                  <p style={{ color: 'var(--color-text)' }}>{selectedSupport.answerContent}</p>
+                  <div className='text-right mt-2 text-sm' style={{ color: 'var(--color-text)' }}>
+                    답변 일시: {new Date(selectedSupport.answeredAt).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 모달 푸터 */}
+          <div
+            className='border-t px-5 py-3 flex justify-end'
+            style={{ borderColor: 'var(--color-secondary)' }}
+          >
+            <button
+              onClick={() => setDetailModalOpen(false)}
+              className='px-4 py-2 rounded-md transition hover:opacity-80'
+              style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -358,7 +511,8 @@ export default function MyPage() {
               <h2 className='text-xl font-semibold'>내 문의 내역</h2>
               <button
                 onClick={() => setSupportModalOpen(true)}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center'
+                className='px-4 py-2 rounded-lg flex items-center transition hover:opacity-80'
+                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
               >
                 <svg className='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                   <path
@@ -374,7 +528,10 @@ export default function MyPage() {
 
             {loadingSupports ? (
               <div className='flex justify-center items-center py-10'>
-                <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500'></div>
+                <div
+                  className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2'
+                  style={{ borderColor: 'var(--color-primary)' }}
+                ></div>
               </div>
             ) : supports.length > 0 ? (
               <div>
@@ -383,7 +540,7 @@ export default function MyPage() {
                 ))}
               </div>
             ) : (
-              <div className='py-10 text-center text-gray-500'>
+              <div className='py-10 text-center' style={{ color: 'var(--color-text)' }}>
                 문의 내역이 없습니다. 궁금한 점이 있으시면 문의하기 버튼을 눌러주세요.
               </div>
             )}
@@ -425,6 +582,9 @@ export default function MyPage() {
         onClose={() => setSupportModalOpen(false)}
         onSuccess={handleSupportSuccess}
       />
+
+      {/* 문의 상세 모달 */}
+      {detailModalOpen && <SupportDetailModal />}
     </div>
   );
 }
