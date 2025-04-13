@@ -88,8 +88,11 @@ const FollowModal: React.FC<FollowModalProps> = ({
     <div className='fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center'>
       <div
         ref={modalRef}
-        className='rounded-lg w-full max-w-md max-h-[80vh] flex flex-col'
-        style={{ backgroundColor: 'var(--color-neutral)' }}
+        className='rounded-lg w-full max-w-2xl max-h-[85vh] flex flex-col border-2'
+        style={{
+          backgroundColor: 'var(--color-neutral)',
+          borderColor: 'black',
+        }}
       >
         {/* 모달 헤더 */}
         <div
