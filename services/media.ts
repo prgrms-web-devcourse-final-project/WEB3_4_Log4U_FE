@@ -11,7 +11,7 @@ export class MediaService {
 
   /**
    * 백엔드에서 S3 presigned URL을 가져옵니다.
-   * @param fileName 파일 이름
+   * @param filename 파일 이름
    * @param contentType 파일 타입 (MIME 타입)
    * @param size 파일 크기 (바이트)
    * @returns presigned URL, 접근 가능한 파일 URL, 미디어 ID
@@ -44,12 +44,14 @@ export class MediaService {
    * @param presignedUrl S3 presigned URL
    * @param file 업로드할 파일
    * @param fileId 파일 식별자 (진행률 추적용)
+   * @param contentType 파일 타입 (MIME 타입)
    * @param onProgress 진행 상태 콜백 함수 (0-100)
    */
   static async uploadFileToS3(
     presignedUrl: string,
     file: File,
     fileId: string,
+    contentType: string,
     onProgress?: (fileId: string, progress: number) => void
   ): Promise<void> {
     try {
@@ -87,7 +89,7 @@ export class MediaService {
 
         // 요청 설정 및 전송
         xhr.open('PUT', presignedUrl);
-        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.setRequestHeader('Content-Type', contentType);
         xhr.send(file);
       });
     } catch (error) {
