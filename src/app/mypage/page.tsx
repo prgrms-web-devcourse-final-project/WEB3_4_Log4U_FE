@@ -4,20 +4,13 @@ import { useEffect, useState } from 'react';
 import { UserService } from '@root/services/user';
 import { DiaryService } from '@root/services/diary';
 import { FollowService } from '@root/services/follow';
+import { SupportService } from '@root/services/support';
 import { User } from '@root/types/user';
 import { Diary } from '@root/types/diary';
+import { Support } from '@root/types/support';
 import Link from 'next/link';
 import FollowModal from './components/FollowModal';
-
-// 임시 문의 내역 데이터 타입
-interface Inquiry {
-  id: number;
-  title: string;
-  content: string;
-  status: 'pending' | 'answered';
-  createdAt: string;
-  answer?: string;
-}
+import InquiryModal from './components/InquiryModal';
 
 export default function MyPage() {
   const [user, setUser] = useState<User.Me | null>(null);
@@ -33,32 +26,12 @@ export default function MyPage() {
     isFollowers: true,
   });
 
-  // 임시 문의 내역 데이터
-  const [inquiries] = useState<Inquiry[]>([
-    {
-      id: 1,
-      title: '서비스 이용 중 오류가 발생했습니다',
-      content: '다이어리 작성 시 이미지 업로드가 안됩니다.',
-      status: 'answered',
-      createdAt: '2023-05-15T12:30:00',
-      answer: '안녕하세요, 해당 문제를 확인했습니다. 현재 수정 중이니 조금만 기다려주세요.',
-    },
-    {
-      id: 2,
-      title: '계정 정보 변경은 어떻게 하나요?',
-      content: '프로필 사진과 닉네임을 변경하고 싶습니다.',
-      status: 'pending',
-      createdAt: '2023-05-20T09:15:00',
-    },
-    {
-      id: 3,
-      title: '앱 배포 일정이 궁금합니다',
-      content: '안드로이드와 iOS 앱 출시 예정일이 있나요?',
-      status: 'answered',
-      createdAt: '2023-05-10T17:45:00',
-      answer: '현재 앱 개발 중이며, 이번 달 내로 베타 버전 출시 예정입니다.',
-    },
-  ]);
+  // 문의 내역 데이터
+  const [inquiries, setInquiries] = useState<Support.ISummary[]>([]);
+  const [loadingInquiries, setLoadingInquiries] = useState(false);
+
+  // 문의하기 모달 상태
+  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -104,11 +77,21 @@ export default function MyPage() {
         } finally {
           setTabLoading(false);
         }
+      } else if (activeTab === 'inquiries' && inquiries.length === 0) {
+        setLoadingInquiries(true);
+        try {
+          const response = await SupportService.getSupports();
+          setInquiries(response.list || []);
+        } catch (error) {
+          console.error('문의 내역을 불러오는 중 오류 발생:', error);
+        } finally {
+          setLoadingInquiries(false);
+        }
       }
     };
 
     fetchTabData();
-  }, [activeTab, likedDiaries.length]);
+  }, [activeTab, likedDiaries.length, inquiries.length]);
 
   // 모달 닫기
   const closeModal = () => {
@@ -147,6 +130,20 @@ export default function MyPage() {
     } catch (error) {
       console.error('언팔로우 실패:', error);
       throw error;
+    }
+  };
+
+  // 문의 등록 성공 시 실행할 함수
+  const handleInquirySuccess = async () => {
+    // 문의 목록 새로고침
+    setLoadingInquiries(true);
+    try {
+      const response = await SupportService.getSupports();
+      setInquiries(response.list || []);
+    } catch (error) {
+      console.error('문의 목록을 불러오는 데 실패했습니다:', error);
+    } finally {
+      setLoadingInquiries(false);
     }
   };
 
@@ -194,13 +191,13 @@ export default function MyPage() {
   );
 
   // 문의 내역 아이템 컴포넌트
-  const InquiryItem = ({ inquiry }: { inquiry: Inquiry }) => (
+  const InquiryItem = ({ inquiry }: { inquiry: Support.ISummary }) => (
     <div className='border rounded-lg overflow-hidden mb-4 hover:shadow-md transition'>
       <div className='px-4 py-3 bg-gray-50 flex justify-between items-center'>
         <div className='flex items-center'>
           <span
             className={`inline-block w-2 h-2 rounded-full mr-2 ${
-              inquiry.status === 'answered' ? 'bg-green-500' : 'bg-yellow-500'
+              inquiry.answered ? 'bg-green-500' : 'bg-yellow-500'
             }`}
           ></span>
           <h3 className='font-medium'>{inquiry.title}</h3>
@@ -208,15 +205,6 @@ export default function MyPage() {
         <span className='text-sm text-gray-500'>
           {new Date(inquiry.createdAt).toLocaleDateString()}
         </span>
-      </div>
-      <div className='p-4 border-t'>
-        <p className='text-gray-700 mb-3'>{inquiry.content}</p>
-        {inquiry.answer && (
-          <div className='mt-3 bg-gray-50 p-3 rounded-lg'>
-            <p className='text-sm text-gray-600 font-medium mb-1'>답변</p>
-            <p className='text-gray-700'>{inquiry.answer}</p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -368,8 +356,8 @@ export default function MyPage() {
           <div>
             <div className='flex justify-between items-center mb-6'>
               <h2 className='text-xl font-semibold'>내 문의 내역</h2>
-              <Link
-                href='/inquiries/new'
+              <button
+                onClick={() => setInquiryModalOpen(true)}
                 className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center'
               >
                 <svg className='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -381,10 +369,14 @@ export default function MyPage() {
                   />
                 </svg>
                 문의하기
-              </Link>
+              </button>
             </div>
 
-            {inquiries.length > 0 ? (
+            {loadingInquiries ? (
+              <div className='flex justify-center items-center py-10'>
+                <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500'></div>
+              </div>
+            ) : inquiries.length > 0 ? (
               <div>
                 {inquiries.map(inquiry => (
                   <InquiryItem key={inquiry.id} inquiry={inquiry} />
@@ -425,6 +417,13 @@ export default function MyPage() {
         title={modalState.title}
         isFollowers={modalState.isFollowers}
         onUnfollow={handleUnfollow}
+      />
+
+      {/* 문의하기 모달 */}
+      <InquiryModal
+        isOpen={inquiryModalOpen}
+        onClose={() => setInquiryModalOpen(false)}
+        onSuccess={handleInquirySuccess}
       />
     </div>
   );

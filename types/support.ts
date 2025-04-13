@@ -10,6 +10,17 @@ export namespace Support {
   } as const;
   export type Type = (typeof Type)[keyof typeof Type];
 
+  export const TypeMap = {
+    [Support.Type.TECHNICAL_ISSUE]: '기술적 문제',
+    [Support.Type.ACCOUNT_ISSUE]: '계정 문제',
+    [Support.Type.PAYMENT_ISSUE]: '결제 문제',
+    [Support.Type.FEATURE_REQUEST]: '기능 요청',
+    [Support.Type.BILLING_ISSUE]: '청구 문제',
+    [Support.Type.SECURITY_CONCERN]: '보안 문제',
+    [Support.Type.ETC]: '기타',
+  } as const;
+  export type TypeMap = (typeof TypeMap)[keyof typeof TypeMap];
+
   export interface ISummary {
     id: number;
 
