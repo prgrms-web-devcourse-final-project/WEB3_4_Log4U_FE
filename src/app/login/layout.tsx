@@ -17,6 +17,7 @@ export default function Layout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log('login layout');
   return (
     <html lang='en'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
