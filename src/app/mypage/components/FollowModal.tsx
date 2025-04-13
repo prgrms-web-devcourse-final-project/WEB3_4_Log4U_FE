@@ -88,12 +88,22 @@ const FollowModal: React.FC<FollowModalProps> = ({
     <div className='fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center'>
       <div
         ref={modalRef}
-        className='bg-white rounded-lg w-full max-w-md max-h-[80vh] flex flex-col'
+        className='rounded-lg w-full max-w-md max-h-[80vh] flex flex-col'
+        style={{ backgroundColor: 'var(--color-neutral)' }}
       >
         {/* 모달 헤더 */}
-        <div className='border-b px-4 py-3 flex items-center justify-between'>
-          <h3 className='text-xl font-semibold'>{title}</h3>
-          <button onClick={onClose} className='text-gray-500 hover:text-gray-700'>
+        <div
+          className='border-b px-4 py-3 flex items-center justify-between'
+          style={{ borderColor: 'var(--color-secondary)' }}
+        >
+          <h3 className='text-xl font-semibold' style={{ color: 'var(--color-primary)' }}>
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            className='hover:opacity-75'
+            style={{ color: 'var(--color-primary)' }}
+          >
             <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path
                 strokeLinecap='round'
@@ -106,14 +116,15 @@ const FollowModal: React.FC<FollowModalProps> = ({
         </div>
 
         {/* 검색 영역 */}
-        <div className='p-4 border-b'>
+        <div className='p-4 border-b' style={{ borderColor: 'var(--color-secondary)' }}>
           <div className='relative'>
             <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
               <svg
-                className='w-5 h-5 text-gray-400'
+                className='w-5 h-5'
                 fill='none'
                 stroke='currentColor'
                 viewBox='0 0 24 24'
+                style={{ color: 'var(--color-primary)' }}
               >
                 <path
                   strokeLinecap='round'
@@ -125,7 +136,15 @@ const FollowModal: React.FC<FollowModalProps> = ({
             </div>
             <input
               type='text'
-              className='pl-10 w-full bg-gray-50 border border-gray-300 rounded-lg py-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className='pl-10 w-full border rounded-lg py-2 focus:outline-none focus:ring-2'
+              style={
+                {
+                  backgroundColor: 'var(--color-secondary)',
+                  borderColor: 'var(--color-primary)',
+                  color: 'var(--color-text)',
+                  '--tw-ring-color': 'var(--color-primary)',
+                } as React.CSSProperties
+              }
               placeholder='검색'
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -137,16 +156,19 @@ const FollowModal: React.FC<FollowModalProps> = ({
         <div className='flex-1 overflow-y-auto'>
           {loading ? (
             <div className='flex justify-center items-center py-8'>
-              <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500'></div>
+              <div
+                className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2'
+                style={{ borderColor: 'var(--color-primary)' }}
+              ></div>
             </div>
           ) : filteredFollows.length === 0 ? (
-            <div className='text-center py-8 text-gray-500'>
+            <div className='text-center py-8' style={{ color: 'var(--color-text)' }}>
               {searchTerm
                 ? '검색 결과가 없습니다.'
                 : `${isFollowers ? '팔로워' : '팔로잉'}가 없습니다.`}
             </div>
           ) : (
-            <ul className='divide-y'>
+            <ul className='divide-y' style={{ borderColor: 'var(--color-secondary)' }}>
               {filteredFollows.map(follow => (
                 <li key={follow.userId} className='px-4 py-3 flex items-center justify-between'>
                   <div className='flex items-center'>
@@ -158,17 +180,23 @@ const FollowModal: React.FC<FollowModalProps> = ({
                       />
                     </div>
                     <div className='ml-3'>
-                      <div className='font-medium'>{follow.nickname}</div>
+                      <div className='font-medium' style={{ color: 'var(--color-text)' }}>
+                        {follow.nickname}
+                      </div>
                     </div>
                   </div>
                   {!isFollowers && (
                     <button
                       onClick={() => handleUnfollow(follow.nickname)}
                       disabled={unfollowLoading[follow.nickname]}
-                      className='ml-2 text-gray-500 hover:text-red-500'
+                      className='ml-2 hover:opacity-80'
+                      style={{ color: 'var(--color-accent)' }}
                     >
                       {unfollowLoading[follow.nickname] ? (
-                        <div className='animate-spin rounded-full h-5 w-5 border-t-2 border-red-500'></div>
+                        <div
+                          className='animate-spin rounded-full h-5 w-5 border-t-2'
+                          style={{ borderColor: 'var(--color-accent)' }}
+                        ></div>
                       ) : (
                         <svg
                           className='w-5 h-5'
