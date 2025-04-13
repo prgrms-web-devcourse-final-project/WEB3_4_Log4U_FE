@@ -26,7 +26,7 @@ export default function SearchPage() {
   const diariesContainerRef = useRef<HTMLDivElement | null>(null);
 
   // 정렬 방식 설정
-  const sort = activeTab === '최신순' ? Diary.SortType.LATEST : Diary.SortType.LIKE;
+  const sort = activeTab === '최신순' ? Diary.SortType.LATEST : Diary.SortType.POPULAR;
 
   // 검색 결과 가져오기
   const fetchSearchResults = useCallback(
