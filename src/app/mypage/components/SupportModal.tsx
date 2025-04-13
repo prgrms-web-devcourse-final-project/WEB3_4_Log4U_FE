@@ -87,12 +87,25 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, onSuccess 
     <div className='fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center'>
       <div
         ref={modalRef}
-        className='bg-white rounded-lg w-full max-w-lg border-2 border-black shadow-lg'
+        className='rounded-lg w-full max-w-lg border-2 shadow-lg'
+        style={{
+          backgroundColor: 'var(--color-neutral)',
+          borderColor: 'var(--color-primary)',
+        }}
       >
         {/* 모달 헤더 */}
-        <div className='border-b px-5 py-4 flex items-center justify-between'>
-          <h3 className='text-xl font-semibold'>문의 등록하기</h3>
-          <button onClick={onClose} className='text-gray-500 hover:text-gray-700'>
+        <div
+          className='border-b px-5 py-4 flex items-center justify-between'
+          style={{ borderColor: 'var(--color-secondary)' }}
+        >
+          <h3 className='text-xl font-semibold' style={{ color: 'var(--color-primary)' }}>
+            문의 등록하기
+          </h3>
+          <button
+            onClick={onClose}
+            style={{ color: 'var(--color-primary)' }}
+            className='hover:opacity-75'
+          >
             <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path
                 strokeLinecap='round'
@@ -107,16 +120,31 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, onSuccess 
         {/* 문의 폼 */}
         <div className='p-5'>
           {error && (
-            <div className='mb-4 p-3 bg-red-50 text-red-600 rounded-md text-sm'>{error}</div>
+            <div
+              className='mb-4 p-3 rounded-md text-sm'
+              style={{ backgroundColor: '#FDEDEC', color: 'var(--color-accent)' }}
+            >
+              {error}
+            </div>
           )}
 
           {/* 문의 유형 */}
           <div className='mb-4'>
-            <label className='block text-gray-700 font-medium mb-2'>문의 유형</label>
+            <label className='block font-medium mb-2' style={{ color: 'var(--color-text)' }}>
+              문의 유형
+            </label>
             <select
               value={supportType}
               onChange={e => setSupportType(e.target.value as Support.Type)}
-              className='w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className='w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-2'
+              style={
+                {
+                  borderColor: 'var(--color-secondary)',
+                  backgroundColor: 'white',
+                  color: 'var(--color-text)',
+                  '--tw-ring-color': 'var(--color-primary)',
+                } as React.CSSProperties
+              }
             >
               {Object.values(Support.Type).map(value => (
                 <option key={value} value={value}>
@@ -128,41 +156,72 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, onSuccess 
 
           {/* 제목 */}
           <div className='mb-4'>
-            <label className='block text-gray-700 font-medium mb-2'>제목</label>
+            <label className='block font-medium mb-2' style={{ color: 'var(--color-text)' }}>
+              제목
+            </label>
             <input
               type='text'
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder='문의 제목을 입력하세요'
-              className='w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className='w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-2'
+              style={
+                {
+                  borderColor: 'var(--color-secondary)',
+                  backgroundColor: 'white',
+                  color: 'var(--color-text)',
+                  '--tw-ring-color': 'var(--color-primary)',
+                } as React.CSSProperties
+              }
             />
           </div>
 
           {/* 내용 */}
           <div className='mb-4'>
-            <label className='block text-gray-700 font-medium mb-2'>내용</label>
+            <label className='block font-medium mb-2' style={{ color: 'var(--color-text)' }}>
+              내용
+            </label>
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
               placeholder='구체적인 문의 내용을 기재해주세요.'
               rows={5}
-              className='w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className='w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-2'
+              style={
+                {
+                  borderColor: 'var(--color-secondary)',
+                  backgroundColor: 'white',
+                  color: 'var(--color-text)',
+                  '--tw-ring-color': 'var(--color-primary)',
+                } as React.CSSProperties
+              }
             />
           </div>
         </div>
 
         {/* 모달 푸터 */}
-        <div className='border-t px-5 py-3 flex justify-end space-x-2'>
+        <div
+          className='border-t px-5 py-3 flex justify-end space-x-2'
+          style={{ borderColor: 'var(--color-secondary)' }}
+        >
           <button
             onClick={onClose}
-            className='px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition'
+            className='px-4 py-2 rounded-md transition hover:opacity-80'
+            style={{
+              backgroundColor: 'var(--color-secondary)',
+              color: 'var(--color-text)',
+            }}
           >
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center'
+            className='px-4 py-2 rounded-md transition hover:opacity-80 flex items-center'
+            style={{
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+            }}
           >
             {isSubmitting ? (
               <>
