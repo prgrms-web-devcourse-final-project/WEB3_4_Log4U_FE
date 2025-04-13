@@ -17,11 +17,12 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+interface LayoutProps {
   children: React.ReactNode;
-}>) {
+  modal: React.ReactNode;
+}
+
+export default function RootLayout({ children, modal }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -37,7 +38,7 @@ export default function RootLayout({
           });
         }
       })
-      .catch(_error => {
+      .catch(() => {
         router.push('/login');
       });
   }, []);
@@ -59,6 +60,7 @@ export default function RootLayout({
               <RightSideBar></RightSideBar>
             </div>
           )}
+          {modal}
         </div>
       </body>
     </html>
