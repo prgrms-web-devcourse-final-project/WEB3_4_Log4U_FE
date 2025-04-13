@@ -1,5 +1,5 @@
 export namespace User {
-  export interface Me {
+  export interface ICommon {
     userId: number;
 
     name: string;
@@ -16,6 +16,10 @@ export namespace User {
 
     followings: number;
   }
+
+  export interface Me extends ICommon {}
+
+  export interface ISummary extends ICommon {}
 
   export interface IFollowSummary {
     userId: number;
