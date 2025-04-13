@@ -6,6 +6,7 @@ import { Diary } from '../../../../types/diary';
 import { DiaryService } from '../../../../services/diary';
 import { MediaService } from '../../../../services/media';
 import { useRouter } from 'next/navigation';
+import { v4 } from 'uuid';
 
 const DiaryCreatePage: FC = () => {
   const router = useRouter();
@@ -260,7 +261,7 @@ const DiaryCreatePage: FC = () => {
         const fileId = `${Date.now()}-${i}-${originalName}`;
 
         // 1. 백엔드에서 presigned URL 요청
-        const { presignedUrl, fileUrl, mediaId } = await MediaService.getPresignedUrl(
+        const { presignedUrl, accessUrl, mediaId } = await MediaService.getPresignedUrl(
           originalName,
           contentType,
           size
@@ -280,13 +281,15 @@ const DiaryCreatePage: FC = () => {
           }
         );
 
+        console.log(accessUrl);
         // 3. 미디어 아이템 생성
         const mediaItem: Diary.DiaryMedia = {
           mediaId,
           originalName,
+          storedName: v4() + '-' + originalName,
           contentType,
           size,
-          url: fileUrl,
+          url: accessUrl,
           orderIndex,
         };
 

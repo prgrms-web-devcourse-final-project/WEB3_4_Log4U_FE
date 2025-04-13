@@ -48,7 +48,7 @@ export namespace Diary {
   export interface DiaryMedia {
     mediaId: number;
     originalName: string;
-    storedName?: string;
+    storedName: string;
     contentType: string;
     size: number;
     url: string;
