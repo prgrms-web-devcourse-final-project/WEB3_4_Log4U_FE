@@ -16,6 +16,7 @@ function SearchContent() {
 
   const [activeTab, setActiveTab] = useState<'최신순' | '인기순'>('최신순');
   const [searchQuery, setSearchQuery] = useState(query);
+  const [searchType, setSearchType] = useState<'내용' | '작가'>('내용');
   const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -28,6 +29,28 @@ function SearchContent() {
 
   // 정렬 방식 설정
   const sort = activeTab === '최신순' ? Diary.SortType.LATEST : Diary.SortType.POPULAR;
+
+  // 검색 타입 변경 핸들러
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as '내용' | '작가';
+    setSearchType(newType);
+
+    // 타입이 변경되면 즉시 해당 페이지로 이동
+    if (newType === '작가') {
+      // 검색어가 있으면 쿼리와 함께, 없으면 그냥 이동
+      if (searchQuery.trim()) {
+        router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push('/users/search');
+      }
+    } else {
+      if (searchQuery.trim()) {
+        router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push('/diaries/search');
+      }
+    }
+  };
 
   // 검색 결과 가져오기
   const fetchSearchResults = useCallback(
@@ -114,7 +137,11 @@ function SearchContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+      if (searchType === '내용') {
+        router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+      }
     }
   };
 
@@ -133,18 +160,16 @@ function SearchContent() {
           {/* 검색 폼 */}
           <form onSubmit={handleSearchSubmit} className='flex items-center max-w-md mx-auto mb-6'>
             <div className='relative flex items-center flex-grow'>
-              <select className='absolute left-2 bg-transparent border-none appearance-none focus:outline-none'>
-                <option>내용</option>
-                <option>제목</option>
-                <option>작성자</option>
+              <select
+                className='absolute left-2 bg-transparent border-none appearance-none focus:outline-none pr-5 z-10'
+                value={searchType}
+                onChange={handleSearchTypeChange}
+              >
+                <option value='내용'>내용</option>
+                <option value='작가'>작가</option>
               </select>
-              <div className='absolute left-16 w-4 h-4 pointer-events-none'>
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  className='h-4 w-4 text-gray-500'
-                  viewBox='0 0 20 20'
-                  fill='currentColor'
-                >
+              <div className='absolute left-12 w-4 h-4 pointer-events-none'>
+                <svg className='h-4 w-4 text-gray-500' viewBox='0 0 20 20' fill='currentColor'>
                   <path
                     fillRule='evenodd'
                     d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'
