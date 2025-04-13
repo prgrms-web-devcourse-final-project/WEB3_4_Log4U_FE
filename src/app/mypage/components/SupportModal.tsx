@@ -4,13 +4,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Support } from '@root/types/support';
 import { SupportService } from '@root/services/support';
 
-interface InquiryModalProps {
+interface SupportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [supportType, setSupportType] = useState<Support.Type>(Support.Type.TECHNICAL_ISSUE);
@@ -179,4 +179,4 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, onSuccess 
   );
 };
 
-export default InquiryModal;
+export default SupportModal;

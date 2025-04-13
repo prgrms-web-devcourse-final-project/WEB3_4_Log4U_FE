@@ -10,7 +10,7 @@ import { Diary } from '@root/types/diary';
 import { Support } from '@root/types/support';
 import Link from 'next/link';
 import FollowModal from './components/FollowModal';
-import InquiryModal from './components/InquiryModal';
+import SupportModal from './components/SupportModal';
 
 export default function MyPage() {
   const [user, setUser] = useState<User.Me | null>(null);
@@ -27,11 +27,11 @@ export default function MyPage() {
   });
 
   // 문의 내역 데이터
-  const [inquiries, setInquiries] = useState<Support.ISummary[]>([]);
-  const [loadingInquiries, setLoadingInquiries] = useState(false);
+  const [supports, setSupports] = useState<Support.ISummary[]>([]);
+  const [loadingSupports, setLoadingSupports] = useState(false);
 
   // 문의하기 모달 상태
-  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -77,21 +77,21 @@ export default function MyPage() {
         } finally {
           setTabLoading(false);
         }
-      } else if (activeTab === 'inquiries' && inquiries.length === 0) {
-        setLoadingInquiries(true);
+      } else if (activeTab === 'supports' && supports.length === 0) {
+        setLoadingSupports(true);
         try {
           const response = await SupportService.getSupports();
-          setInquiries(response.list || []);
+          setSupports(response.list || []);
         } catch (error) {
           console.error('문의 내역을 불러오는 중 오류 발생:', error);
         } finally {
-          setLoadingInquiries(false);
+          setLoadingSupports(false);
         }
       }
     };
 
     fetchTabData();
-  }, [activeTab, likedDiaries.length, inquiries.length]);
+  }, [activeTab, likedDiaries.length, supports.length]);
 
   // 모달 닫기
   const closeModal = () => {
@@ -134,16 +134,16 @@ export default function MyPage() {
   };
 
   // 문의 등록 성공 시 실행할 함수
-  const handleInquirySuccess = async () => {
+  const handleSupportSuccess = async () => {
     // 문의 목록 새로고침
-    setLoadingInquiries(true);
+    setLoadingSupports(true);
     try {
       const response = await SupportService.getSupports();
-      setInquiries(response.list || []);
+      setSupports(response.list || []);
     } catch (error) {
       console.error('문의 목록을 불러오는 데 실패했습니다:', error);
     } finally {
-      setLoadingInquiries(false);
+      setLoadingSupports(false);
     }
   };
 
@@ -191,19 +191,19 @@ export default function MyPage() {
   );
 
   // 문의 내역 아이템 컴포넌트
-  const InquiryItem = ({ inquiry }: { inquiry: Support.ISummary }) => (
+  const SupportItem = ({ support }: { support: Support.ISummary }) => (
     <div className='border rounded-lg overflow-hidden mb-4 hover:shadow-md transition'>
       <div className='px-4 py-3 bg-gray-50 flex justify-between items-center'>
         <div className='flex items-center'>
           <span
             className={`inline-block w-2 h-2 rounded-full mr-2 ${
-              inquiry.answered ? 'bg-green-500' : 'bg-yellow-500'
+              support.answered ? 'bg-green-500' : 'bg-yellow-500'
             }`}
           ></span>
-          <h3 className='font-medium'>{inquiry.title}</h3>
+          <h3 className='font-medium'>{support.title}</h3>
         </div>
         <span className='text-sm text-gray-500'>
-          {new Date(inquiry.createdAt).toLocaleDateString()}
+          {new Date(support.createdAt).toLocaleDateString()}
         </span>
       </div>
     </div>
@@ -299,11 +299,11 @@ export default function MyPage() {
           </button>
           <button
             className={`py-4 px-6 font-medium ${
-              activeTab === 'inquiries'
+              activeTab === 'supports'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500'
             }`}
-            onClick={() => setActiveTab('inquiries')}
+            onClick={() => setActiveTab('supports')}
           >
             내 문의 내역
           </button>
@@ -352,12 +352,12 @@ export default function MyPage() {
         )}
 
         {/* 내 문의 내역 탭 */}
-        {!tabLoading && activeTab === 'inquiries' && (
+        {!tabLoading && activeTab === 'supports' && (
           <div>
             <div className='flex justify-between items-center mb-6'>
               <h2 className='text-xl font-semibold'>내 문의 내역</h2>
               <button
-                onClick={() => setInquiryModalOpen(true)}
+                onClick={() => setSupportModalOpen(true)}
                 className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center'
               >
                 <svg className='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -372,14 +372,14 @@ export default function MyPage() {
               </button>
             </div>
 
-            {loadingInquiries ? (
+            {loadingSupports ? (
               <div className='flex justify-center items-center py-10'>
                 <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500'></div>
               </div>
-            ) : inquiries.length > 0 ? (
+            ) : supports.length > 0 ? (
               <div>
-                {inquiries.map(inquiry => (
-                  <InquiryItem key={inquiry.id} inquiry={inquiry} />
+                {supports.map(support => (
+                  <SupportItem key={support.id} support={support} />
                 ))}
               </div>
             ) : (
@@ -420,10 +420,10 @@ export default function MyPage() {
       />
 
       {/* 문의하기 모달 */}
-      <InquiryModal
-        isOpen={inquiryModalOpen}
-        onClose={() => setInquiryModalOpen(false)}
-        onSuccess={handleInquirySuccess}
+      <SupportModal
+        isOpen={supportModalOpen}
+        onClose={() => setSupportModalOpen(false)}
+        onSuccess={handleSupportSuccess}
       />
     </div>
   );
