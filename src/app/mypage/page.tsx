@@ -9,6 +9,16 @@ import { Diary } from '@root/types/diary';
 import Link from 'next/link';
 import FollowModal from './components/FollowModal';
 
+// 임시 문의 내역 데이터 타입
+interface Inquiry {
+  id: number;
+  title: string;
+  content: string;
+  status: 'pending' | 'answered';
+  createdAt: string;
+  answer?: string;
+}
+
 export default function MyPage() {
   const [user, setUser] = useState<User.Me | null>(null);
   const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
@@ -22,6 +32,33 @@ export default function MyPage() {
     title: '',
     isFollowers: true,
   });
+
+  // 임시 문의 내역 데이터
+  const [inquiries] = useState<Inquiry[]>([
+    {
+      id: 1,
+      title: '서비스 이용 중 오류가 발생했습니다',
+      content: '다이어리 작성 시 이미지 업로드가 안됩니다.',
+      status: 'answered',
+      createdAt: '2023-05-15T12:30:00',
+      answer: '안녕하세요, 해당 문제를 확인했습니다. 현재 수정 중이니 조금만 기다려주세요.',
+    },
+    {
+      id: 2,
+      title: '계정 정보 변경은 어떻게 하나요?',
+      content: '프로필 사진과 닉네임을 변경하고 싶습니다.',
+      status: 'pending',
+      createdAt: '2023-05-20T09:15:00',
+    },
+    {
+      id: 3,
+      title: '앱 배포 일정이 궁금합니다',
+      content: '안드로이드와 iOS 앱 출시 예정일이 있나요?',
+      status: 'answered',
+      createdAt: '2023-05-10T17:45:00',
+      answer: '현재 앱 개발 중이며, 이번 달 내로 베타 버전 출시 예정입니다.',
+    },
+  ]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -156,6 +193,34 @@ export default function MyPage() {
     </div>
   );
 
+  // 문의 내역 아이템 컴포넌트
+  const InquiryItem = ({ inquiry }: { inquiry: Inquiry }) => (
+    <div className='border rounded-lg overflow-hidden mb-4 hover:shadow-md transition'>
+      <div className='px-4 py-3 bg-gray-50 flex justify-between items-center'>
+        <div className='flex items-center'>
+          <span
+            className={`inline-block w-2 h-2 rounded-full mr-2 ${
+              inquiry.status === 'answered' ? 'bg-green-500' : 'bg-yellow-500'
+            }`}
+          ></span>
+          <h3 className='font-medium'>{inquiry.title}</h3>
+        </div>
+        <span className='text-sm text-gray-500'>
+          {new Date(inquiry.createdAt).toLocaleDateString()}
+        </span>
+      </div>
+      <div className='p-4 border-t'>
+        <p className='text-gray-700 mb-3'>{inquiry.content}</p>
+        {inquiry.answer && (
+          <div className='mt-3 bg-gray-50 p-3 rounded-lg'>
+            <p className='text-sm text-gray-600 font-medium mb-1'>답변</p>
+            <p className='text-gray-700'>{inquiry.answer}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className='flex justify-center items-center min-h-screen'>
@@ -246,16 +311,18 @@ export default function MyPage() {
           </button>
           <button
             className={`py-4 px-6 font-medium ${
-              activeTab === 'saved' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'
+              activeTab === 'inquiries'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500'
             }`}
-            onClick={() => setActiveTab('saved')}
+            onClick={() => setActiveTab('inquiries')}
           >
-            저장한 다이어리
+            내 문의 내역
           </button>
         </div>
       </div>
 
-      {/* 다이어리 그리드 */}
+      {/* 다이어리 그리드 및 문의 내역 */}
       <div className='p-8'>
         {/* 탭 로딩 인디케이터 */}
         {tabLoading && (
@@ -264,41 +331,68 @@ export default function MyPage() {
           </div>
         )}
 
-        {!tabLoading && (
+        {/* 내 다이어리 탭 */}
+        {!tabLoading && activeTab === 'myDiaries' && (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {activeTab === 'myDiaries' && (
-              <>
-                <Link
-                  href='/diaries/create'
-                  className='border border-dashed rounded-lg overflow-hidden hover:shadow-md transition'
-                >
-                  <EmptyDiaryCard />
-                </Link>
-                {diaries.length > 0 ? (
-                  diaries.map(diary => <DiaryCard key={diary.diaryId} diary={diary} />)
-                ) : (
-                  <div className='col-span-3 py-10 text-center text-gray-500'>
-                    작성한 다이어리가 없습니다.
-                  </div>
-                )}
-              </>
+            <Link
+              href='/diaries/create'
+              className='border border-dashed rounded-lg overflow-hidden hover:shadow-md transition'
+            >
+              <EmptyDiaryCard />
+            </Link>
+            {diaries.length > 0 ? (
+              diaries.map(diary => <DiaryCard key={diary.diaryId} diary={diary} />)
+            ) : (
+              <div className='col-span-3 py-10 text-center text-gray-500'>
+                작성한 다이어리가 없습니다.
+              </div>
             )}
+          </div>
+        )}
 
-            {activeTab === 'liked' && (
-              <>
-                {likedDiaries.length > 0 ? (
-                  likedDiaries.map(diary => <DiaryCard key={diary.diaryId} diary={diary} />)
-                ) : (
-                  <div className='col-span-3 py-10 text-center text-gray-500'>
-                    좋아요한 다이어리가 없습니다.
-                  </div>
-                )}
-              </>
+        {/* 좋아요한 다이어리 탭 */}
+        {!tabLoading && activeTab === 'liked' && (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {likedDiaries.length > 0 ? (
+              likedDiaries.map(diary => <DiaryCard key={diary.diaryId} diary={diary} />)
+            ) : (
+              <div className='col-span-3 py-10 text-center text-gray-500'>
+                좋아요한 다이어리가 없습니다.
+              </div>
             )}
+          </div>
+        )}
 
-            {activeTab === 'saved' && (
-              <div className='col-span-3 py-16 text-center text-gray-500'>
-                아직 저장한 다이어리가 없습니다.
+        {/* 내 문의 내역 탭 */}
+        {!tabLoading && activeTab === 'inquiries' && (
+          <div>
+            <div className='flex justify-between items-center mb-6'>
+              <h2 className='text-xl font-semibold'>내 문의 내역</h2>
+              <Link
+                href='/inquiries/new'
+                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center'
+              >
+                <svg className='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M12 4v16m8-8H4'
+                  />
+                </svg>
+                문의하기
+              </Link>
+            </div>
+
+            {inquiries.length > 0 ? (
+              <div>
+                {inquiries.map(inquiry => (
+                  <InquiryItem key={inquiry.id} inquiry={inquiry} />
+                ))}
+              </div>
+            ) : (
+              <div className='py-10 text-center text-gray-500'>
+                문의 내역이 없습니다. 궁금한 점이 있으시면 문의하기 버튼을 눌러주세요.
               </div>
             )}
           </div>
