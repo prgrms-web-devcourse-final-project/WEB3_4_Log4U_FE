@@ -38,6 +38,7 @@ export default function UserSearchPage() {
   const query = searchParams.get('q') || '';
 
   const [searchQuery, setSearchQuery] = useState(query);
+  const [searchType, setSearchType] = useState<'작가' | '내용'>('작가');
   const [users, setUsers] = useState<User.ISummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -50,7 +51,35 @@ export default function UserSearchPage() {
   // 검색 폼 제출 핸들러
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+    if (!searchQuery.trim()) return;
+
+    if (searchType === '작가') {
+      router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  // 검색 타입 변경 핸들러
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as '작가' | '내용';
+    setSearchType(newType);
+
+    // 타입이 변경되면 즉시 해당 페이지로 이동
+    if (newType === '내용') {
+      // 검색어가 있으면 쿼리와 함께, 없으면 그냥 이동
+      if (searchQuery.trim()) {
+        router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push('/diaries/search');
+      }
+    } else {
+      if (searchQuery.trim()) {
+        router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push('/users/search');
+      }
+    }
   };
 
   // 유저 검색 데이터 가져오기
@@ -129,38 +158,57 @@ export default function UserSearchPage() {
       <div className='p-4 max-w-3xl mx-auto w-full'>
         {/* 검색 입력 */}
         <form onSubmit={handleSearch} className='mb-6'>
-          <div className='relative'>
-            <input
-              type='text'
-              placeholder='사용자 검색...'
-              className='w-full border border-gray-300 rounded-lg py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-gray-900'
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-            <svg
-              className='w-5 h-5 absolute left-3 top-2.5 text-gray-500'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-            >
-              <path
-                d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
-                strokeLinecap='round'
-                strokeLinejoin='round'
+          <div className='relative flex items-center'>
+            <div className='relative flex items-center flex-grow'>
+              <select
+                className='absolute left-2 bg-transparent border-none appearance-none focus:outline-none pr-5 z-10'
+                value={searchType}
+                onChange={handleSearchTypeChange}
+              >
+                <option value='내용'>내용</option>
+                <option value='작가'>작가</option>
+              </select>
+              <div className='absolute left-12 w-4 h-4 pointer-events-none'>
+                <svg className='h-4 w-4 text-gray-500' viewBox='0 0 20 20' fill='currentColor'>
+                  <path
+                    fillRule='evenodd'
+                    d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'
+                    clipRule='evenodd'
+                  />
+                </svg>
+              </div>
+              <input
+                type='text'
+                placeholder='검색어를 입력하세요'
+                className='w-full border border-gray-300 rounded-lg py-2 pl-20 pr-10 focus:outline-none focus:ring-2 focus:ring-gray-900'
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
               />
-            </svg>
-            <button type='submit' className='absolute right-3 top-2 text-gray-500'>
               <svg
-                className='w-5 h-5'
+                className='w-5 h-5 absolute right-10 top-2.5 text-gray-500'
                 viewBox='0 0 24 24'
                 fill='none'
                 stroke='currentColor'
                 strokeWidth='2'
               >
-                <path d='M5 12h14M12 5l7 7-7 7' strokeLinecap='round' strokeLinejoin='round' />
+                <path
+                  d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                />
               </svg>
-            </button>
+              <button type='submit' className='absolute right-3 top-2 text-gray-500'>
+                <svg
+                  className='w-5 h-5'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2'
+                >
+                  <path d='M5 12h14M12 5l7 7-7 7' strokeLinecap='round' strokeLinejoin='round' />
+                </svg>
+              </button>
+            </div>
           </div>
         </form>
 
