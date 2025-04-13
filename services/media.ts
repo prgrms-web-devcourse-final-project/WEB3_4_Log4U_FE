@@ -2,7 +2,7 @@ import { axiosInstance } from './axios.instance';
 
 export interface PresignedUrlResponse {
   presignedUrl: string;
-  fileUrl: string;
+  accessUrl: string;
   mediaId: number;
 }
 
@@ -32,6 +32,7 @@ export class MediaService {
         },
       });
 
+      console.log(data);
       return data;
     } catch (error) {
       console.error('Presigned URL 가져오기 오류:', error);
