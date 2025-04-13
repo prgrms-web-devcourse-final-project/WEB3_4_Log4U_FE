@@ -1,14 +1,15 @@
 // app/search/page.tsx
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleMapComponent from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
 import { Diary } from '@root/types/diary';
 import Link from 'next/link';
 
-export default function SearchPage() {
+// SearchContent 컴포넌트로 분리
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
@@ -252,5 +253,22 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 로딩 상태 컴포넌트
+function SearchLoading() {
+  return (
+    <div className='flex justify-center items-center h-screen'>
+      <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900'></div>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchLoading />}>
+      <SearchContent />
+    </Suspense>
   );
 }
