@@ -19,10 +19,10 @@ const geistMono = Geist_Mono({
 
 interface LayoutProps {
   children: React.ReactNode;
-  modal: React.ReactNode;
+  // modal: React.ReactNode;
 }
 
-export default function RootLayout({ children, modal }: LayoutProps) {
+export default function RootLayout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -60,7 +60,6 @@ export default function RootLayout({ children, modal }: LayoutProps) {
               <RightSideBar></RightSideBar>
             </div>
           )}
-          {modal}
         </div>
       </body>
     </html>
