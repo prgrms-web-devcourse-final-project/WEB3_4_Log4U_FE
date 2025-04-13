@@ -62,12 +62,14 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
           </span>
         </div>
 
-        {/* 위치 정보 */}
+        {/* 위치 정보 - 일반 다이어리 카드 */}
         <div
           className='truncate max-w-[120px]'
-          title={`${diary.dongmyun}, ${Diary.WeatherMap[diary.weatherInfo]}`}
+          title={`${diary.sido || ''} ${diary.sigungu || ''} ${diary.dongmyun || ''}`}
         >
-          {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
+          {diary.sigungu && diary.dongmyun
+            ? `${diary.sigungu} ${diary.dongmyun}`
+            : diary.dongmyun || diary.sigungu || '위치 정보 없음'}
         </div>
       </div>
     </div>
@@ -91,7 +93,7 @@ const EmptyDiaryCard = ({ index }: { index: number }) => (
           <span className='truncate max-w-[120px]'>작성자 정보 없음</span>
         </div>
 
-        {/* 위치 정보 */}
+        {/* 위치 정보 - 빈 다이어리 카드 */}
         <div className='truncate max-w-[120px]'>위치 정보 없음</div>
       </div>
     </div>
