@@ -14,7 +14,7 @@ export default function SupportDetailModal({ support, onClose }: SupportDetailMo
   const hasAnswer = support.answerContent && support.answeredAt;
 
   return (
-    <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'>
+    <div className='fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center'>
       <div
         className='rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border-2'
         style={{ backgroundColor: 'var(--color-neutral)', borderColor: 'var(--color-primary)' }}

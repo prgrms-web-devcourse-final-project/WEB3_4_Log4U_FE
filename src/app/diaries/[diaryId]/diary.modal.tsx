@@ -574,7 +574,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
       {/* 신고 모달 */}
       {showReportModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50'>
+        <div className='fixed inset-0 bg-opacity-50 flex justify-center items-center z-50'>
           <div ref={reportModalRef} className='bg-white rounded-lg w-96 p-6 shadow-xl'>
             <div className='text-xl font-semibold mb-4'>신고하기</div>
 

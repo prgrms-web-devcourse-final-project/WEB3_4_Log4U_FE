@@ -28,7 +28,7 @@ export default function DiaryCard({ diary }: DiaryCardProps) {
             className='w-full h-full object-cover group-hover:scale-105 transition duration-300'
           />
         )}
-        <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300'></div>
+        <div className='absolute inset-0 bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300'></div>
       </div>
       <div className='p-4'>
         <h3 className='font-semibold mb-1 truncate'>{diary.title}</h3>
