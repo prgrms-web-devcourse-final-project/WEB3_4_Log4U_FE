@@ -16,4 +16,12 @@ export namespace User {
 
     followings: number;
   }
+
+  export interface IFollowSummary {
+    userId: number;
+
+    nickname: string;
+
+    thumbNail: string;
+  }
 }
