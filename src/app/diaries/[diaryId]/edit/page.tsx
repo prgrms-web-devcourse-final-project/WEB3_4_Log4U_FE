@@ -4,6 +4,8 @@ import { ChangeEvent, FC, FormEvent, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Diary } from '@root/types/diary';
 import { DiaryService } from '@root/services/diary';
+import { MediaService } from '@root/services/media';
+import { v4 } from 'uuid';
 
 const DiaryEditPage: FC = () => {
   const params = useParams();
@@ -34,7 +36,10 @@ const DiaryEditPage: FC = () => {
     eupmyeondong: '역삼동',
   });
   const [loading, setLoading] = useState<boolean>(false);
-  const [mediaList, setMediaList] = useState<Diary.DiaryMedia[]>([]);
+  const [mediaList, setMediaList] = useState<Diary.DiaryMedia.MutateDto[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Path variable인 diaryId가 존재하면, 해당 다이어리 정보를 조회해서 기본값으로 설정
   useEffect(() => {
@@ -65,8 +70,21 @@ const DiaryEditPage: FC = () => {
           });
 
           // 미디어 리스트 설정
-          if (data.mediaList) {
-            setMediaList(data.mediaList);
+          if (data.mediaList && data.mediaList.length > 0) {
+            // DiaryMedia를 MutateDto로 변환
+            const convertedMediaList = data.mediaList.map(media => {
+              const mutateMedia: Diary.DiaryMedia.MutateDto = {
+                mediaId: media.mediaId,
+                originalName: `file-${media.mediaId}`, // 기존 파일은 실제 originalName이 없으므로 임의 생성
+                storedName: `stored-${media.mediaId}`, // 기존 파일은 실제 storedName이 없으므로 임의 생성
+                contentType: media.contentType,
+                size: 0, // 기존 파일은 실제 size 정보가 없으므로 0으로 설정
+                url: media.fileUrl, // fileUrl을 url로 매핑
+                orderIndex: media.orderIndex,
+              };
+              return mutateMedia;
+            });
+            setMediaList(convertedMediaList);
           }
 
           // 해시태그 설정 (API에서 제공하는 형식에 따라 조정 필요)
@@ -125,6 +143,88 @@ const DiaryEditPage: FC = () => {
     setContent(e.target.value);
   };
 
+  // S3에 파일 업로드 핸들러
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    setLoading(true);
+    setIsUploading(true);
+    setErrorMessage('');
+    const files = Array.from(e.target.files);
+    const newMediaItems: Diary.DiaryMedia.MutateDto[] = [];
+
+    // 진행 상태 초기화
+    const initialProgress: { [key: string]: number } = {};
+    files.forEach(file => {
+      initialProgress[file.name] = 0;
+    });
+    setUploadProgress(initialProgress);
+
+    try {
+      // 각 파일에 대해 순차적으로 처리
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const originalName = file.name;
+        const contentType = file.type;
+        const size = file.size;
+        const orderIndex = mediaList.length + i;
+        const fileId = `${Date.now()}-${i}-${originalName}`;
+
+        // 새로 첨부하는 파일만 presignedUrl 발급 및 업로드
+        // 1. 백엔드에서 presigned URL 요청
+        const { presignedUrl, accessUrl, mediaId } = await MediaService.getPresignedUrl(
+          originalName,
+          contentType,
+          size
+        );
+
+        // 2. S3에 파일 업로드 (진행 상태 추적)
+        await MediaService.uploadFileToS3(
+          presignedUrl,
+          file,
+          fileId,
+          contentType,
+          (fileId, progress) => {
+            setUploadProgress(prev => ({
+              ...prev,
+              [fileId]: progress,
+            }));
+          }
+        );
+
+        // UUID와 구분자를 제외한 원본 파일명 추출
+        const storedName = v4() + '-' + originalName;
+
+        console.log('업로드 완료, 접근 URL:', accessUrl);
+        // 3. DiaryMedia.MutateDto 형태로 미디어 아이템 생성
+        const mediaItem: Diary.DiaryMedia.MutateDto = {
+          mediaId,
+          originalName, // 원본 파일명
+          storedName, // UUID 추가된 저장 파일명
+          contentType, // 파일 타입 (MIME 타입)
+          size, // 파일 크기
+          url: accessUrl, // S3 접근 URL
+          orderIndex, // 정렬 순서
+        };
+
+        newMediaItems.push(mediaItem);
+      }
+
+      // 모든 업로드가 성공하면 상태 업데이트 (기존 mediaList에 추가)
+      setMediaList(prev => [...prev, ...newMediaItems]);
+    } catch (error) {
+      console.error('파일 업로드 중 오류 발생:', error);
+      setErrorMessage('파일 업로드 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsUploading(false);
+      setLoading(false);
+      // 파일 선택 초기화
+      if (e.target) {
+        e.target.value = '';
+      }
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -134,8 +234,9 @@ const DiaryEditPage: FC = () => {
     }
 
     setLoading(true);
+    setErrorMessage('');
 
-    // Diary.CreateDto 형식에 맞게 데이터 구성
+    // UpdateDto는 mediaList가 MutateDto[] 타입을 요구하므로 변환 불필요
     const formData: Diary.UpdateDto = {
       title: title,
       content: content,
@@ -149,7 +250,7 @@ const DiaryEditPage: FC = () => {
       },
       weatherInfo: weather,
       visibility: visibility,
-      mediaList: mediaList,
+      mediaList: mediaList, // MutateDto[] 타입 그대로 사용
       hashtagList: tags,
       thumbnailUrl: mediaList.length > 0 ? mediaList[0].url : undefined,
     };
@@ -162,7 +263,7 @@ const DiaryEditPage: FC = () => {
       router.push(`/diaries/${diaryId}`);
     } catch (error) {
       console.error(error);
-      alert('다이어리 수정 중 오류가 발생했습니다.');
+      setErrorMessage('다이어리 수정 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -172,7 +273,7 @@ const DiaryEditPage: FC = () => {
     return tags.map(tag => `#${tag}`).join(' ');
   };
 
-  if (loading) {
+  if (loading && !isUploading) {
     return (
       <div className='flex justify-center items-center h-screen'>
         <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500'></div>
@@ -185,6 +286,12 @@ const DiaryEditPage: FC = () => {
       onSubmit={handleSubmit}
       className='max-w-md mx-auto my-8 border border-gray-300 rounded p-4 bg-white'
     >
+      {errorMessage && (
+        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
+          {errorMessage}
+        </div>
+      )}
+
       {/* 날짜 선택 */}
       <div className='text-center mb-6'>
         <label className='block text-lg font-semibold mb-2'>날짜</label>
@@ -325,21 +432,116 @@ const DiaryEditPage: FC = () => {
         </div>
       )}
 
+      {/* 업로드 진행 상태 표시 */}
+      {isUploading && Object.keys(uploadProgress).length > 0 && (
+        <div className='mb-4 border rounded p-3 bg-gray-50'>
+          <div className='font-medium mb-2 text-sm'>파일 업로드 중...</div>
+          {Object.entries(uploadProgress).map(([fileName, progress]) => (
+            <div key={fileName} className='mb-2'>
+              <div className='flex justify-between text-xs mb-1'>
+                <span className='truncate'>{fileName}</span>
+                <span>{progress}%</span>
+              </div>
+              <div className='w-full bg-gray-200 rounded-full h-2'>
+                <div
+                  className='bg-blue-500 h-2 rounded-full'
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 하단 버튼 영역 */}
       <div className='flex justify-between'>
-        <button
-          type='button'
-          className='px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 text-sm'
-          disabled={loading}
+        <label
+          className={`px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 text-sm cursor-pointer flex items-center ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          파일 첨부
-        </button>
+          {isUploading ? (
+            <>
+              <svg
+                className='animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                ></circle>
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                ></path>
+              </svg>
+              업로드 중...
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='h-4 w-4 mr-1'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M12 4v16m8-8H4'
+                />
+              </svg>
+              파일 첨부
+            </>
+          )}
+          <input
+            type='file'
+            onChange={handleFileUpload}
+            multiple
+            className='hidden'
+            accept='image/*,video/*'
+            disabled={loading}
+          />
+        </label>
         <button
           type='submit'
-          className='px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed'
+          className='px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm disabled:bg-blue-300 flex items-center'
           disabled={loading}
         >
-          {loading ? '저장 중...' : '완료'}
+          {loading && !isUploading ? (
+            <>
+              <svg
+                className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                ></circle>
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                ></path>
+              </svg>
+              저장 중...
+            </>
+          ) : (
+            '완료'
+          )}
         </button>
       </div>
     </form>
