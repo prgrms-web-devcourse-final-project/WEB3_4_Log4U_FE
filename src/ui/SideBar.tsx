@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import { DiaryService } from '@root/services/diary';
 import { Diary } from '@root/types/diary';
+import { MapService } from '@root/services/map';
 
 interface SideBarProps {
   children: React.ReactNode;
@@ -61,7 +62,69 @@ export function RightSideBar() {
   const [loading, setLoading] = useState(true);
   const [popularDiaries, setPopularDiaries] = useState<Diary.IPopularSummary[]>([]);
   const [loadingDiaries, setLoadingDiaries] = useState(true);
+  const [locationInfo, setLocationInfo] = useState({
+    sido: '서울특별시',
+    sigungu: '강남구',
+    eupmyeondong: '역삼동',
+    temperature: '6°C',
+    loading: true,
+    error: false,
+  });
   const router = useRouter();
+
+  // 위치 정보 가져오기
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      try {
+        setLocationInfo(prev => ({ ...prev, loading: true, error: false }));
+
+        // 브라우저의 Geolocation API를 사용하여 현재 위치 가져오기
+        navigator.geolocation.getCurrentPosition(
+          async position => {
+            try {
+              const { latitude, longitude } = position.coords;
+
+              // MapService를 사용하여 위치 정보 가져오기
+              const geoData = await MapService.getGeolocation(latitude, longitude);
+
+              if (geoData && geoData.results && geoData.results.length > 0) {
+                const result = geoData.results[0];
+                const sido = result.region.area1?.name || '알 수 없음';
+                const sigungu = result.region.area2?.name || '알 수 없음';
+                const eupmyeondong = result.region.area3?.name || '알 수 없음';
+
+                // 위치 정보 상태 업데이트
+                setLocationInfo(prev => ({
+                  ...prev,
+                  sido,
+                  sigungu,
+                  eupmyeondong,
+                  loading: false,
+                }));
+
+                // 날씨 정보는 별도의 API가 필요하므로 여기서는 기존 값을 유지
+              } else {
+                throw new Error('위치 정보를 찾을 수 없습니다.');
+              }
+            } catch (error) {
+              console.error('위치 정보 처리 중 오류 발생:', error);
+              setLocationInfo(prev => ({ ...prev, loading: false, error: true }));
+            }
+          },
+          error => {
+            console.error('위치 정보 가져오기 실패:', error);
+            setLocationInfo(prev => ({ ...prev, loading: false, error: true }));
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } catch (error) {
+        console.error('위치 정보 로드 실패:', error);
+        setLocationInfo(prev => ({ ...prev, loading: false, error: true }));
+      }
+    };
+
+    fetchLocationData();
+  }, []);
 
   // 사용자 정보 가져오기
   useEffect(() => {
@@ -173,9 +236,17 @@ export function RightSideBar() {
         <div>
           <div className='flex items-center'>
             <Image src={'/sun.png'} alt={'weather image'} width={50} height={50} />
-            <span className='p-5 text-2xl font-bold'>6°C</span>
+            <span className='p-5 text-2xl font-bold'>{locationInfo.temperature}</span>
           </div>
-          <div>서울특별시 강남구</div>
+          {locationInfo.loading ? (
+            <div className='text-sm text-gray-500 ml-2'>위치 정보 로딩 중...</div>
+          ) : locationInfo.error ? (
+            <div className='text-sm text-gray-500 ml-2'>위치 정보를 가져올 수 없습니다</div>
+          ) : (
+            <div className='text-sm ml-2'>
+              {locationInfo.sido} {locationInfo.sigungu} {locationInfo.eupmyeondong}
+            </div>
+          )}
         </div>
       </div>
       <div className='grow-2 mt-8'>
