@@ -180,12 +180,11 @@ export default function MyPage() {
         <div className='h-48 bg-gradient-to-r from-blue-400 to-indigo-500'></div>
         <div className='absolute bottom-0 left-0 w-full transform translate-y-1/2 px-8 flex items-end'>
           <div className='w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg'>
-
-                src={user?.profileImage ?? '/public/test-profile.svg'}
-                alt='프로필 이미지'
-                className='w-full h-full object-cover'
-              />
-            
+            <img
+              src={user?.profileImage ?? '/public/test-profile.svg'}
+              alt='프로필 이미지'
+              className='w-full h-full object-cover'
+            />
           </div>
           <div className='ml-6 pb-4'>
             <h1 className='text-3xl font-bold'>{user?.name || 'User'}</h1>
