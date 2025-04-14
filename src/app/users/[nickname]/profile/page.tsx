@@ -115,6 +115,8 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isMyself, setIsMyself] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
 
   // 팔로우 모달 상태
   const [modalState, setModalState] = useState({
@@ -206,8 +208,9 @@ export default function UserProfilePage() {
 
   // 팔로우/언팔로우 처리
   const handleToggleFollow = async () => {
-    if (!profile) return;
+    if (!profile || followLoading) return;
 
+    setFollowLoading(true);
     try {
       if (isFollowing) {
         await FollowService.unfollow(profile.nickname);
@@ -222,6 +225,9 @@ export default function UserProfilePage() {
       }
     } catch (error) {
       console.error('팔로우 상태 변경 중 오류:', error);
+    } finally {
+      setFollowLoading(false);
+      setIsHovering(false);
     }
   };
 
@@ -442,29 +448,49 @@ export default function UserProfilePage() {
                 {!isMyself && (
                   <button
                     onClick={handleToggleFollow}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                    disabled={followLoading}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition relative ${
                       isFollowing
-                        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                        ? isHovering
+                          ? 'bg-red-100 text-red-600 border border-red-600'
+                          : 'bg-gray-200 text-gray-800 border border-gray-300'
                         : 'bg-blue-500 text-white hover:bg-blue-600'
                     }`}
                   >
-                    {isFollowing ? '팔로잉' : '팔로우'}
+                    {followLoading ? (
+                      <span className='flex items-center justify-center'>
+                        <span className='animate-spin h-4 w-4 border-2 border-t-transparent rounded-full mr-1'></span>
+                        처리 중
+                      </span>
+                    ) : isFollowing ? (
+                      isHovering ? (
+                        '언팔로우'
+                      ) : (
+                        '팔로잉'
+                      )
+                    ) : (
+                      '팔로우'
+                    )}
                   </button>
                 )}
               </div>
               <div className='flex space-x-4 text-sm'>
-                <div>게시물 {profile.diaryCount}</div>
+                <div>
+                  <span className='font-semibold'>{profile.diaryCount}</span> 게시물
+                </div>
                 <div
                   className='cursor-pointer hover:text-blue-500 transition'
                   onClick={openFollowersModal}
                 >
-                  팔로워 {profile.followers}
+                  <span className='font-semibold'>{profile.followers}</span> 팔로워
                 </div>
                 <div
                   className='cursor-pointer hover:text-blue-500 transition'
                   onClick={openFollowingsModal}
                 >
-                  팔로잉 {profile.followings}
+                  <span className='font-semibold'>{profile.followings}</span> 팔로잉
                 </div>
               </div>
               {profile.statusMessage && (
