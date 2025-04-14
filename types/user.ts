@@ -1,5 +1,5 @@
 export namespace User {
-  export interface Me {
+  export interface ICommon {
     userId: number;
 
     name: string;
@@ -17,11 +17,31 @@ export namespace User {
     followings: number;
   }
 
+  export interface Me extends ICommon {}
+
+  export interface ISummary extends ICommon {}
+
+  export interface IDetail extends ICommon {}
+
   export interface IFollowSummary {
     userId: number;
 
     nickname: string;
 
     thumbNail: string;
+  }
+
+  export class CreateProfileDto {
+    nickname!: string;
+
+    statusMessage!: string;
+
+    profileImage!: string;
+  }
+
+  export class UpdateProfileDto {
+    profileImage!: string;
+
+    statusMessage!: string;
   }
 }

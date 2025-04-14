@@ -101,17 +101,39 @@ export function RightSideBar() {
       router.push('/login');
     } catch (error) {
       console.error('로그아웃 실패:', error);
+    } finally {
+      setIsDropdownOpen(false);
     }
   };
+
+  const handleEditProfile = () => {
+    router.push('/users/profile/edit');
+    setIsDropdownOpen(false);
+  };
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isDropdownOpen && !target.closest('.profile-dropdown-container')) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   return (
     <SideBar>
       <div className='grow-1'>
-        <div className='flex items-center relative'>
+        <div className='flex items-center relative profile-dropdown-container'>
           <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className='flex items-center'>
             <div className='w-[50px] h-[50px] rounded-full overflow-hidden'>
               <img
-                src={user?.profileImage || '/public/test-profile.png'}
+                src={user?.profileImage ?? '/public/test-profile.svg'}
                 alt={`${user?.name || '사용자'} 프로필 이미지`}
                 width={50}
                 height={50}
@@ -119,11 +141,17 @@ export function RightSideBar() {
               />
             </div>
             <span className='p-5 text-2xl font-bold'>
-              {loading ? '로딩 중...' : user?.name || '사용자'}
+              {loading ? '로딩 중...' : user?.nickname || '사용자'}
             </span>
           </button>
           {isDropdownOpen && (
-            <div className='absolute top-full left-0 mt-2 bg-white rounded-md shadow-lg'>
+            <div className='absolute top-full left-0 mt-2 bg-white rounded-md shadow-lg z-10 w-40'>
+              <button
+                onClick={handleEditProfile}
+                className='block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-b border-gray-200'
+              >
+                프로필 수정
+              </button>
               <button
                 onClick={handleLogout}
                 className='block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'

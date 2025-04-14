@@ -57,11 +57,11 @@ export class DiaryService {
     }
   }
 
-  static async deleteDiary(diaryId: string) {
+  static async deleteDiary(diaryId: number) {
     try {
-      await axiosInstance.request<Diary.Detail>({
-        url: this.DELETE_DIARY_API(parseInt(diaryId)),
-        method: 'GET',
+      await axiosInstance.request<void, AxiosResponse<void>>({
+        url: this.DELETE_DIARY_API(diaryId),
+        method: 'DELETE',
       });
     } catch (error) {
       console.error('Error deleting diary:', error);

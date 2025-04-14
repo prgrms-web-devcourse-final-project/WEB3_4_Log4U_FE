@@ -12,6 +12,7 @@ import { ReportService } from '@root/services/report';
 import { Report } from '@root/types/report';
 import { DiaryService } from '@root/services/diary';
 import { Pagination } from '@root/types/pagination';
+import assert from 'assert';
 
 interface DiaryModalProps {
   diary: Diary.Detail | null;
@@ -176,10 +177,8 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     setIsActionLoading(true);
 
     try {
-      if (!diary) {
-        return;
-      }
-      await DiaryService.deleteDiary(diary.diaryId.toString());
+      assert(diary, '다이어리가 존재하지 않습니다.');
+      await DiaryService.deleteDiary(diary.diaryId);
 
       router.push('/diaries');
     } catch (err) {
@@ -411,17 +410,19 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
           {/* 헤더 */}
           <div className='p-4 border-b flex items-center justify-between'>
             <div className='flex items-center'>
-              <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
-                <img
-                  src={diary.authorProfileImage}
-                  alt='프로필'
-                  className='w-full h-full object-cover'
-                />
-              </div>
-              <div>
-                <div className='font-bold'>{authorName}</div>
-                <div className='text-sm text-gray-600'>{locationText}</div>
-              </div>
+              <Link href={`/users/${diary.authorNickname}/profile`} className='flex items-center'>
+                <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
+                  <img
+                    src={diary.authorProfileImage}
+                    alt='프로필'
+                    className='w-full h-full object-cover'
+                  />
+                </div>
+                <div>
+                  <div className='font-bold'>{authorName}</div>
+                  <div className='text-sm text-gray-600'>{locationText}</div>
+                </div>
+              </Link>
             </div>
             <button onClick={onClose} className='text-gray-500'>
               <svg
