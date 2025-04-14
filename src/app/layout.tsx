@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { axiosInstance } from '../../services/axios.instance';
 import './globals.css';
+import { User } from '@root/types/user';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps) {
 
   useEffect(() => {
     axiosInstance
-      .get('users/me')
+      .get<User.Me>('users/me')
       .then(response => {
         if (response.status !== 200) {
           axiosInstance.get('/oauth2/token/reissue').then(response => {
@@ -37,6 +38,11 @@ export default function RootLayout({ children }: LayoutProps) {
             }
           });
         }
+
+        // 302 상태코드 해결되기 전까지 주석유지
+        // if (!response.data.profileImage || !response.data.nickname) {
+        //   router.push('/users/profile/new');
+        // }
       })
       .catch(() => {
         router.push('/login');
