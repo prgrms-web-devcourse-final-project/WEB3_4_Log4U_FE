@@ -1,3 +1,4 @@
+import { Pagination } from '@root/types/pagination';
 import { User } from '@root/types/user';
 import { axiosInstance } from './axios.instance';
 import { AxiosResponse } from 'axios';
@@ -29,6 +30,19 @@ export class UserService {
       return data;
     } catch (error) {
       console.error('Error fetching user:', error);
+      throw error;
+    }
+  }
+  static async getUserList(
+    query: User.GetListQueryDto
+  ): Promise<Pagination.ICursor<User.ISummary>> {
+    try {
+      const { data } = await axiosInstance.get<Pagination.ICursor<User.ISummary>>(`/users/search`, {
+        params: query,
+      });
+      return data;
+    } catch (error) {
+      console.error('Error fetching user list:', error);
       throw error;
     }
   }
