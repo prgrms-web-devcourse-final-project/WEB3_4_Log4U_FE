@@ -58,7 +58,7 @@ export function RightSideBar() {
   const [user, setUser] = useState<User.Me | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const hotUsers = [
+  const hotUsers: string[] = [
     // 'winter',
     // 'winter',
     // 'winter',
@@ -109,12 +109,15 @@ export function RightSideBar() {
       <div className='grow-1'>
         <div className='flex items-center relative'>
           <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className='flex items-center'>
-            <img
-              src={user?.profileImage || '/public/test-profile.png'}
-              alt={`${user?.name || '사용자'} 프로필 이미지`}
-              width={50}
-              height={50}
-            />
+            <div className='w-[50px] h-[50px] rounded-full overflow-hidden'>
+              <img
+                src={user?.profileImage || '/public/test-profile.png'}
+                alt={`${user?.name || '사용자'} 프로필 이미지`}
+                width={50}
+                height={50}
+                className='w-full h-full object-cover'
+              />
+            </div>
             <span className='p-5 text-2xl font-bold'>
               {loading ? '로딩 중...' : user?.name || '사용자'}
             </span>
