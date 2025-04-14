@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { UserService } from '@root/services/user';
 import { User } from '@root/types/user';
 import { Pagination } from '@root/types/pagination';
@@ -32,7 +32,17 @@ const UserItem = ({ user }: UserItemProps) => {
   );
 };
 
-export default function UserSearchPage() {
+// 로딩 상태 컴포넌트
+function UserSearchLoading() {
+  return (
+    <div className='flex justify-center items-center h-[300px]'>
+      <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900'></div>
+    </div>
+  );
+}
+
+// 실제 검색 기능을 수행하는 컴포넌트
+function UserSearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
@@ -218,5 +228,14 @@ export default function UserSearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 메인 페이지 컴포넌트 - Suspense로 감싸서 useSearchParams() 에러 해결
+export default function UserSearchPage() {
+  return (
+    <Suspense fallback={<UserSearchLoading />}>
+      <UserSearchContent />
+    </Suspense>
   );
 }
