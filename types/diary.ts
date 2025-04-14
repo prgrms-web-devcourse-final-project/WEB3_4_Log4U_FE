@@ -97,6 +97,12 @@ export namespace Diary {
 
   export interface Summary extends Common {}
 
+  export interface IPopularSummary {
+    diaryId: number;
+
+    title: string;
+  }
+
   export interface CreateDto {
     title: string;
     content: string;

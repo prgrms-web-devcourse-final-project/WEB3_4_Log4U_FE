@@ -13,6 +13,7 @@ export class DiaryService {
   private static GET_USER_DIARY_LIST_API = (userId: number) => `/diaries/users/${userId}`;
   private static GET_DIARY_DETAIL_API = (id: number) => `/diaries/${id}`;
   private static GET_LIKED_DIARY_LIST_API = '/users/me/likes';
+  private static GET_POPULAR_DIARY_LIST_API = '/diaries/popular';
 
   static async createDiary(newDiary: Diary.CreateDto): Promise<void> {
     try {
@@ -134,6 +135,19 @@ export class DiaryService {
     try {
       const { data } = await axiosInstance.request<Pagination.ICursor<Diary.Summary>>({
         url: this.GET_LIKED_DIARY_LIST_API,
+        method: 'GET',
+      });
+      return data;
+    } catch (e) {
+      console.error('Error fetching diaries:', e);
+      throw e; // 에러를 다시 던져서 호출한 곳에서 처리할 수 있도록 합니다.
+    }
+  }
+
+  static async getPopularDiaries() {
+    try {
+      const { data } = await axiosInstance.request<Diary.IPopularSummary[]>({
+        url: this.GET_POPULAR_DIARY_LIST_API,
         method: 'GET',
       });
       return data;
