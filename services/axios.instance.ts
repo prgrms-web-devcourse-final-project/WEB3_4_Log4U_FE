@@ -3,7 +3,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
 export const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   timeout: 10000,
   withCredentials: true, // 쿠키 포함 설정 (중요)
 });
@@ -47,7 +47,7 @@ axiosInstance.interceptors.response.use(
         // 토큰 리프레시 API 호출 - 쿠키에 저장된 리프레시 토큰 사용
         // 여기서는 별도의 인스턴스를 생성하여 무한 루프를 방지합니다
         const refreshAxios = axios.create({
-          baseURL: process.env.NEXT_PUBLIC_API_URL,
+          baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
           withCredentials: true,
         });
 
