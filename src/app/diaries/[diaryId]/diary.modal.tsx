@@ -327,7 +327,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   }
 
   // 다이어리 작성자 정보 표시
-  const authorName = isAuthor ? user?.name : '다른 사용자';
+  const authorName = diary.authorNickname;
   const locationText = diary?.dongmyun || '위치 정보 없음';
 
   return (
@@ -338,19 +338,11 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       >
         {/* 좌측: 다이어리 이미지 */}
         <div className='w-3/5 bg-black relative'>
-          {diary.thumbnailUrl ? (
-            <img
-              src={diary.thumbnailUrl}
-              alt='다이어리 썸네일'
-              className='w-full h-full object-contain'
-            />
-          ) : (
-            <img
-              src='/diary-thumbnail-test.png'
-              alt='기본 다이어리 썸네일'
-              className='w-full h-full object-contain'
-            />
-          )}
+          <img
+            src={diary.thumbnailUrl}
+            alt='다이어리 썸네일'
+            className='w-full h-full object-contain'
+          />
         </div>
 
         {/* 우측: 다이어리 정보 및 댓글 */}
@@ -359,19 +351,11 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
           <div className='p-4 border-b flex items-center justify-between'>
             <div className='flex items-center'>
               <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
-                {user?.profileImage ? (
-                  <img
-                    src={user.profileImage}
-                    alt='프로필'
-                    className='w-full h-full object-cover'
-                  />
-                ) : (
-                  <img
-                    src='/test-profile.png'
-                    alt='기본 프로필'
-                    className='w-full h-full object-cover'
-                  />
-                )}
+                <img
+                  src={diary.authorProfileImage}
+                  alt='프로필'
+                  className='w-full h-full object-cover'
+                />
               </div>
               <div>
                 <div className='font-bold'>{authorName}</div>
