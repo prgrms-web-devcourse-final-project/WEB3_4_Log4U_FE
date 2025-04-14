@@ -134,6 +134,8 @@ export default function ProfileSetupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('프로필 설정 완료 버튼 클릭됨');
+
     // 기본 유효성 검사
     if (!nickname.trim()) {
       setNicknameError('닉네임을 입력해주세요');
@@ -160,7 +162,12 @@ export default function ProfileSetupPage() {
         profileImage: profileImage,
       };
 
+      console.log('UserService.createProfile 호출 시작', profileData);
+
+      // UserService.createProfile 메서드 호출
       await UserService.createProfile(profileData);
+
+      console.log('프로필 생성 성공!');
 
       // 프로필 생성 완료 후 홈으로 이동
       alert('프로필 설정이 완료되었습니다!');
@@ -418,6 +425,16 @@ export default function ProfileSetupPage() {
                     : 'var(--color-primary)',
               }}
               disabled={isSubmitting || isUploading || !nicknameAvailable || !profileImage}
+              onClick={() => {
+                console.log('버튼 클릭: 현재 상태', {
+                  nickname,
+                  statusMessage,
+                  profileImage: profileImage ? '설정됨' : '없음',
+                  nicknameAvailable,
+                  isSubmitting,
+                  isUploading,
+                });
+              }}
             >
               {isSubmitting ? (
                 <div className='flex items-center justify-center'>
