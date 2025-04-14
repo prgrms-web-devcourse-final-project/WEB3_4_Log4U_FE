@@ -58,7 +58,11 @@ export namespace Diary {
   export interface Common {
     diaryId: number;
 
-    userId: number;
+    authorId: number;
+
+    authorNickname: string;
+
+    authorProfileImage: string;
 
     latitude: number;
 
