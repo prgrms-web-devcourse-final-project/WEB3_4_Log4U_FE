@@ -169,7 +169,19 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      // 신고 모달이 열려있는 경우에는 다이어리 모달 외부 클릭 이벤트를 처리하지 않음
+      if (showReportModal) return;
+
+      // select 요소나 그 옵션을 클릭했는지 확인
+      const target = event.target as HTMLElement;
+      const isSelectOrOption =
+        target.tagName === 'OPTION' || target.tagName === 'SELECT' || target.closest('select');
+
+      // select 관련 요소를 클릭한 경우 무시
+      if (isSelectOrOption) return;
+
+      // 모달 외부 클릭 시 닫기
+      if (modalRef.current && !modalRef.current.contains(target)) {
         onClose();
       }
     };
@@ -179,7 +191,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose]);
+  }, [onClose, showReportModal]);
 
   // 다이어리 삭제 핸들러
   const handleDelete = async () => {
@@ -261,20 +273,34 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     setSelectedCommentId(null);
   };
 
-  // 모달 외부 클릭 시 닫기
+  // 신고 모달 관련 처리
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (reportModalRef.current && !reportModalRef.current.contains(event.target as Node)) {
+    const handleReportModalClickOutside = (event: MouseEvent) => {
+      // 이벤트 중지하여 다이어리 모달로 전파되지 않도록 함
+      event.stopPropagation();
+
+      // select 요소나 그 옵션을 클릭했는지 확인
+      const target = event.target as HTMLElement;
+      const isSelectOrOption =
+        target.tagName === 'OPTION' || target.tagName === 'SELECT' || target.closest('select');
+
+      // select 관련 요소를 클릭한 경우 무시
+      if (isSelectOrOption) return;
+
+      // 신고 모달 내부인지 확인 (reportModalRef가 없거나 클릭 요소를 포함하지 않으면 외부 클릭)
+      if (reportModalRef.current && !reportModalRef.current.contains(target)) {
+        // 모달 외부 클릭 시 신고 모달만 닫음
         handleCloseReportModal();
       }
     };
 
     if (showReportModal) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // 버블링 단계에서 캡처하기 위해 옵션 추가
+      document.addEventListener('mousedown', handleReportModalClickOutside, { capture: true });
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleReportModalClickOutside, { capture: true });
     };
   }, [showReportModal]);
 
@@ -961,8 +987,22 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
       {/* 신고 모달 */}
       {showReportModal && (
-        <div className='fixed inset-0 bg-opacity-50 flex justify-center items-center z-50'>
-          <div ref={reportModalRef} className='bg-white rounded-lg w-96 p-6 shadow-xl'>
+        <div
+          className='fixed inset-0 bg-opacity-50 flex justify-center items-center z-50'
+          onClick={e => {
+            // 백드롭 클릭 시 이벤트 전파 중지 및 신고 모달만 닫기
+            e.stopPropagation();
+            // 모달 외부(백드롭) 클릭 시에만 닫기
+            if (e.target === e.currentTarget) {
+              handleCloseReportModal();
+            }
+          }}
+        >
+          <div
+            ref={reportModalRef}
+            className='bg-white rounded-lg w-96 p-6 shadow-xl'
+            onClick={e => e.stopPropagation()} // 모달 내부 클릭 시 이벤트 전파 중지
+          >
             <div className='text-xl font-semibold mb-4'>
               {isCommentReport ? '댓글 신고하기' : '다이어리 신고하기'}
             </div>
@@ -972,7 +1012,10 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
               <select
                 className='w-full border border-gray-300 rounded-md p-2'
                 value={reportType}
-                onChange={e => setReportType(e.target.value as Report.Type)}
+                onChange={e => {
+                  e.stopPropagation(); // 선택 시 이벤트 전파 중지
+                  setReportType(e.target.value as Report.Type);
+                }}
               >
                 {Object.entries(Report.TypeLabel).map(([type, label]) => (
                   <option key={type} value={type}>
