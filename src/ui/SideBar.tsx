@@ -1,10 +1,11 @@
 'use client';
 
 import { UserService } from '@root/services/user';
+import { User } from '@root/types/user';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SideBarProps {
   children: React.ReactNode;
@@ -54,24 +55,45 @@ export function LeftSideBar() {
 
 export function RightSideBar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [user, setUser] = useState<User.Me | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const hotUsers = [
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
-    'winter',
+  const hotUsers: string[] = [
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
+    // 'winter',
   ];
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const userData = await UserService.getMe();
+        setUser(userData);
+
+        console.log(user);
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -87,8 +109,18 @@ export function RightSideBar() {
       <div className='grow-1'>
         <div className='flex items-center relative'>
           <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className='flex items-center'>
-            <Image src={'/test-profile.png'} alt={'profile image'} width={50} height={50} />
-            <span className='p-5 text-2xl font-bold'>test user</span>
+            <div className='w-[50px] h-[50px] rounded-full overflow-hidden'>
+              <img
+                src={user?.profileImage || '/public/test-profile.png'}
+                alt={`${user?.name || '사용자'} 프로필 이미지`}
+                width={50}
+                height={50}
+                className='w-full h-full object-cover'
+              />
+            </div>
+            <span className='p-5 text-2xl font-bold'>
+              {loading ? '로딩 중...' : user?.name || '사용자'}
+            </span>
           </button>
           {isDropdownOpen && (
             <div className='absolute top-full left-0 mt-2 bg-white rounded-md shadow-lg'>

@@ -109,43 +109,6 @@ const DiaryCreatePage: FC = () => {
       }
     } catch (error) {
       console.error('역지오코딩 오류:', error);
-
-      // 실패 시 대체 방법: 카카오 지도 API 사용 시도
-      try {
-        const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_API_KEY;
-
-        if (!kakaoApiKey) {
-          throw new Error('카카오 API 키가 설정되지 않았습니다.');
-        }
-
-        const response = await fetch(
-          `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
-          {
-            headers: {
-              Authorization: `KakaoAK ${kakaoApiKey}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (response.ok && data.documents && data.documents.length > 0) {
-          const address = data.documents[0].address;
-
-          // 카카오 API에서 주소 정보 추출
-          const sido = address.region_1depth_name || ''; // 시/도
-          const sigungu = address.region_2depth_name || ''; // 시/군/구
-          const eupmyeondong = address.region_3depth_name || ''; // 읍/면/동
-
-          console.log('카카오 지도 API 응답:', { sido, sigungu, eupmyeondong });
-          return { sido, sigungu, eupmyeondong };
-        }
-      } catch (kakaoError) {
-        console.error('카카오 지도 API 오류:', kakaoError);
-      }
-
-      // 모든 API가 실패하면 원래 오류 전달
-      throw error;
     }
   };
 
@@ -157,21 +120,7 @@ const DiaryCreatePage: FC = () => {
 
     try {
       // 안전한 출처 확인 (localhost, 127.0.0.1, 또는 특정 EC2 도메인)
-      const isSecure =
-        window.location.protocol === 'https:' ||
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.hostname.includes(
-          'ec2-13-209-127-186.ap-northeast-2.compute.amazonaws.com'
-        );
 
-      if (!isSecure) {
-        throw new Error(
-          '위치 정보는 보안 연결(HTTPS) 또는 허용된 도메인에서만 사용할 수 있습니다.'
-        );
-      }
-
-      console.log('navigator.geolocation', navigator.geolocation);
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -179,7 +128,6 @@ const DiaryCreatePage: FC = () => {
           maximumAge: 0,
         });
       });
-      console.log('navigator.position', position);
 
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
@@ -192,13 +140,12 @@ const DiaryCreatePage: FC = () => {
         setLocation({
           latitude: lat,
           longitude: lng,
-          sido: address.sido || '알 수 없음',
-          sigungu: address.sigungu || '알 수 없음',
-          eupmyeondong: address.eupmyeondong || '알 수 없음',
+          sido: address?.sido || '알 수 없음',
+          sigungu: address?.sigungu || '알 수 없음',
+          eupmyeondong: address?.eupmyeondong || '알 수 없음',
         });
       } catch (geoError) {
         console.error('역지오코딩 오류:', geoError);
-        // 위치는 가져왔지만 주소 변환 실패 시
         setLocation({
           latitude: lat,
           longitude: lng,

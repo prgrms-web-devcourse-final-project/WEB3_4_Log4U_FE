@@ -51,7 +51,7 @@ axiosInstance.interceptors.response.use(
           withCredentials: true,
         });
 
-        await refreshAxios.post('/oauth2/token/reissue');
+        await refreshAxios.get('/oauth2/token/reissue');
 
         // 대기 중인 요청들 처리
         onRefreshed();
