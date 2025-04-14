@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { UserService } from '@root/services/user';
 import { MediaService } from '@root/services/media';
 import { User } from '@root/types/user';
-import Image from 'next/image';
 
 export default function ProfileSetupPage() {
   const router = useRouter();
@@ -18,6 +17,7 @@ export default function ProfileSetupPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // 유효성 검사 상태
   const [nicknameError, setNicknameError] = useState('');
@@ -66,6 +66,9 @@ export default function ProfileSetupPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 이미지 오류 상태 초기화
+    setImageError(false);
+
     // 파일 크기 제한 (5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('파일 크기는 5MB 이하여야 합니다.');
@@ -78,14 +81,16 @@ export default function ProfileSetupPage() {
       return;
     }
 
-    // 미리보기 설정
+    // 로컬 파일에서 미리보기 생성 (빠른 피드백을 위해)
     const reader = new FileReader();
     reader.onload = event => {
-      setPreviewImage(event.target?.result as string);
+      if (event.target?.result) {
+        setPreviewImage(event.target.result as string);
+      }
     };
     reader.readAsDataURL(file);
 
-    // 이미지 업로드 시작
+    // 이미지 업로드 시작 (비동기)
     uploadImage(file);
   };
 
@@ -110,11 +115,16 @@ export default function ProfileSetupPage() {
       );
 
       // 업로드 완료 후 S3 URL 설정
+      console.log('Upload succeeded, access URL:', presignedData.accessUrl);
       setProfileImage(presignedData.accessUrl);
+
+      // 업로드 완료 후 미리보기를 유지 (이미 FileReader를 통해 설정됨)
+      // S3 URL은 CORS 문제가 있을 수 있어 로컬 미리보기 사용
     } catch (error) {
       console.error('이미지 업로드 중 오류 발생:', error);
       alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
       setPreviewImage(null);
+      setImageError(true);
     } finally {
       setIsUploading(false);
     }
@@ -194,11 +204,40 @@ export default function ProfileSetupPage() {
             >
               {previewImage ? (
                 <>
-                  <Image src={previewImage} alt='프로필 미리보기' fill className='object-cover' />
+                  <img
+                    src={previewImage}
+                    alt='프로필 미리보기'
+                    className='w-full h-full object-cover'
+                    onError={() => {
+                      console.log('Image failed to load, setting error state');
+                      setImageError(true);
+                    }}
+                  />
                   <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center'>
                     <span className='text-white opacity-0 group-hover:opacity-100'>변경하기</span>
                   </div>
                 </>
+              ) : imageError ? (
+                <div className='text-center'>
+                  <svg
+                    xmlns='http://www.w3.org/2000/svg'
+                    className='h-10 w-10 mx-auto'
+                    fill='none'
+                    viewBox='0 0 24 24'
+                    stroke='currentColor'
+                    style={{ color: 'var(--color-accent)' }}
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={1.5}
+                      d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+                    />
+                  </svg>
+                  <p className='text-xs mt-1' style={{ color: 'var(--color-text)' }}>
+                    이미지 로드 실패
+                  </p>
+                </div>
               ) : (
                 <div className='text-center'>
                   <svg
