@@ -271,7 +271,7 @@ export default function MyPage() {
         {!tabLoading && activeTab === 'myDiaries' && (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
             <Link
-              href='/diaries/create'
+              href='/diaries/new'
               className='border border-dashed rounded-lg overflow-hidden hover:shadow-md transition'
             >
               <EmptyDiaryCard />
