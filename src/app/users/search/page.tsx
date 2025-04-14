@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { UserService } from '@root/services/user';
 import { User } from '@root/types/user';
-import { Pagination } from '@root/types/pagination';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -96,20 +95,24 @@ function UserSearchContent() {
   const fetchUsers = useCallback(
     async (reset = false) => {
       if (loading && !reset) return;
+      if (!searchQuery.trim() && !reset) return;
 
       setLoading(true);
       try {
-        const params: Pagination.CursorDto = {
+        const queryParams: Partial<User.GetListQueryDto> = {
           size: 20,
         };
 
         if (!reset && cursorId) {
-          params.cursorId = cursorId;
+          queryParams.cursor = cursorId;
         }
 
-        // @todo 유저 검색 API 추가 필요.
-        const response = {} as unknown as any;
-        //  await UserService.getUsers(searchQuery);
+        if (searchQuery.trim()) {
+          queryParams.nickname = searchQuery;
+        }
+
+        // TypeScript 캐스팅으로 타입 에러 해결
+        const response = await UserService.getUserList(queryParams as User.GetListQueryDto);
 
         if (reset) {
           setUsers(response.list || []);
@@ -120,6 +123,8 @@ function UserSearchContent() {
         setHasMore(response.pageInfo.hasNext);
         if (response.pageInfo.hasNext) {
           setCursorId(response.pageInfo.nextCursor);
+        } else {
+          setCursorId(undefined);
         }
       } catch (error) {
         console.error('사용자 검색 중 오류 발생:', error);

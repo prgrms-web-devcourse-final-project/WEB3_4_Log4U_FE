@@ -44,4 +44,12 @@ export namespace User {
 
     statusMessage!: string;
   }
+
+  export class GetListQueryDto {
+    cursor!: number;
+
+    size!: number;
+
+    nickname?: string;
+  }
 }
