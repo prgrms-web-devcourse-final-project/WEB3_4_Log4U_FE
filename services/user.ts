@@ -1,6 +1,5 @@
-import { Pagination } from '@root/types/pagination';
-import { axiosInstance } from './axios.instance';
 import { User } from '@root/types/user';
+import { axiosInstance } from './axios.instance';
 
 export class UserService {
   private static GET_ME_API = '/users/me';
@@ -19,14 +18,11 @@ export class UserService {
     }
   }
 
-  static async getUsers(nickname?: string): Promise<Pagination.ICursor<User.ISummary>> {
+  static async getUser(nickname: string): Promise<User.IDetail> {
     try {
-      const { data } = await axiosInstance.request<Pagination.ICursor<User.ISummary>>({
-        url: '/users',
+      const { data } = await axiosInstance.request<User.IDetail>({
+        url: `/users/${nickname}`,
         method: 'GET',
-        params: {
-          nickname,
-        },
       });
 
       return data;
