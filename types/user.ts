@@ -21,6 +21,8 @@ export namespace User {
 
   export interface ISummary extends ICommon {}
 
+  export interface IDetail extends ICommon {}
+
   export interface IFollowSummary {
     userId: number;
 
