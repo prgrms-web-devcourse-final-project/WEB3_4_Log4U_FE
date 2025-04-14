@@ -181,7 +181,7 @@ export default function MyPage() {
         <div className='absolute bottom-0 left-0 w-full transform translate-y-1/2 px-8 flex items-end'>
           <div className='w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg'>
 
-                src={user?.profileImage ?? '/test-profile.svg'}
+                src={user?.profileImage ?? '/public/test-profile.svg'}
                 alt='프로필 이미지'
                 className='w-full h-full object-cover'
               />

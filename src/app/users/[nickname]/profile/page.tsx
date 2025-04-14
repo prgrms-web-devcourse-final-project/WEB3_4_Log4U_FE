@@ -428,7 +428,7 @@ export default function UserProfilePage() {
           <div className='flex items-center'>
             <div className='w-20 h-20 rounded-full border overflow-hidden mr-6'>
               <img
-                src={profile?.profileImage ?? '/test-profile.svg'}
+                src={profile?.profileImage ?? '/public/test-profile.svg'}
                 alt='프로필 이미지'
                 className='w-full h-full object-cover'
               />

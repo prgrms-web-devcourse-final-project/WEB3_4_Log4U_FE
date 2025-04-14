@@ -133,7 +133,7 @@ export function RightSideBar() {
           <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className='flex items-center'>
             <div className='w-[50px] h-[50px] rounded-full overflow-hidden'>
               <img
-                src={user?.profileImage || '/public/test-profile.svg'}
+                src={user?.profileImage ?? '/public/test-profile.svg'}
                 alt={`${user?.name || '사용자'} 프로필 이미지`}
                 width={50}
                 height={50}
