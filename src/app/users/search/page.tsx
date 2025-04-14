@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { UserService } from '@root/services/user';
 import { User } from '@root/types/user';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface UserItemProps {
@@ -11,10 +10,19 @@ interface UserItemProps {
 }
 
 const UserItem = ({ user }: UserItemProps) => {
+  const router = useRouter();
+
+  const handleProfileClick = () => {
+    router.push(`/users/${user.nickname}/profile`);
+  };
+
   return (
-    <div className='flex items-center py-3 border-b border-gray-200 w-full'>
-      <Link href={`/users/${user.nickname}`} className='flex items-center w-full'>
-        <div className='w-12 h-12 rounded-full overflow-hidden mr-4'>
+    <div
+      className='flex items-center py-3 px-3 border-b border-gray-200 w-full hover:bg-[#f9f7f5] transition-colors rounded-md cursor-pointer'
+      onClick={handleProfileClick}
+    >
+      <div className='flex items-center w-full'>
+        <div className='w-12 h-12 rounded-full overflow-hidden mr-4 border border-[var(--color-secondary)]'>
           <img
             src={user?.profileImage ?? '/public/test-profile.svg'}
             alt={`${user.nickname}의 프로필`}
@@ -22,11 +30,22 @@ const UserItem = ({ user }: UserItemProps) => {
           />
         </div>
         <div className='flex-1'>
-          <div className='font-medium'>{user.nickname}</div>
+          <div className='font-medium text-[var(--color-primary)]'>{user.nickname}</div>
           <div className='text-sm text-gray-500'>{user.statusMessage || '소개글이 없습니다'}</div>
           <div className='text-xs text-gray-400'>팔로워 {user.followers}명</div>
         </div>
-      </Link>
+        <div className='text-[var(--color-primary)] opacity-70'>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            className='h-5 w-5'
+            fill='none'
+            viewBox='0 0 24 24'
+            stroke='currentColor'
+          >
+            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 5l7 7-7 7' />
+          </svg>
+        </div>
+      </div>
     </div>
   );
 };
@@ -60,8 +79,8 @@ function UserSearchContent() {
   // 검색 폼 제출 핸들러
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
 
+    // 빈 검색어도 허용
     if (searchType === '작가') {
       router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
     } else {
@@ -95,7 +114,8 @@ function UserSearchContent() {
   const fetchUsers = useCallback(
     async (reset = false) => {
       if (loading && !reset) return;
-      if (!searchQuery.trim() && !reset) return;
+      // 빈 검색어도 API 호출을 허용 (아래 조건 제거)
+      // if (!searchQuery.trim() && !reset) return;
 
       setLoading(true);
       try {
@@ -107,9 +127,11 @@ function UserSearchContent() {
           queryParams.cursor = cursorId;
         }
 
+        // 검색어가 있는 경우에만 nickname 파라미터 추가
         if (searchQuery.trim()) {
           queryParams.nickname = searchQuery;
         }
+        // 검색어가 없으면 nickname 파라미터를 전달하지 않음 (전체 목록 조회)
 
         // TypeScript 캐스팅으로 타입 에러 해결
         const response = await UserService.getUserList(queryParams as User.GetListQueryDto);
