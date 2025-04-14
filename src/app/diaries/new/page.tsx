@@ -140,9 +140,9 @@ const DiaryCreatePage: FC = () => {
         setLocation({
           latitude: lat,
           longitude: lng,
-          sido: address.sido || '알 수 없음',
-          sigungu: address.sigungu || '알 수 없음',
-          eupmyeondong: address.eupmyeondong || '알 수 없음',
+          sido: address?.sido || '알 수 없음',
+          sigungu: address?.sigungu || '알 수 없음',
+          eupmyeondong: address?.eupmyeondong || '알 수 없음',
         });
       } catch (geoError) {
         console.error('역지오코딩 오류:', geoError);
