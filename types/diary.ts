@@ -102,7 +102,9 @@ export namespace Diary {
     mediaList: DiaryMedia[];
   }
 
-  export interface Detail extends Common {}
+  export interface Detail extends Common {
+    isLiked: boolean;
+  }
 
   export interface Summary extends Common {}
 

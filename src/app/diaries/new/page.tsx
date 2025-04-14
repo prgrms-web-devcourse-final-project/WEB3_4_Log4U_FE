@@ -28,7 +28,7 @@ const DiaryCreatePage: FC = () => {
   });
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [mediaList, setMediaList] = useState<Diary.DiaryMedia[]>([]);
+  const [mediaList, setMediaList] = useState<Diary.DiaryMedia.MutateDto[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
@@ -188,7 +188,7 @@ const DiaryCreatePage: FC = () => {
     setIsUploading(true);
     setErrorMessage('');
     const files = Array.from(e.target.files);
-    const newMediaItems: Diary.DiaryMedia[] = [];
+    const newMediaItems: Diary.DiaryMedia.MutateDto[] = [];
 
     // 진행 상태 초기화
     const initialProgress: { [key: string]: number } = {};
@@ -230,7 +230,7 @@ const DiaryCreatePage: FC = () => {
 
         console.log(accessUrl);
         // 3. 미디어 아이템 생성
-        const mediaItem: Diary.DiaryMedia = {
+        const mediaItem: Diary.DiaryMedia.MutateDto = {
           mediaId,
           originalName,
           storedName: v4() + '-' + originalName,
