@@ -38,4 +38,10 @@ export namespace User {
 
     profileImage!: string;
   }
+
+  export class UpdateProfileDto {
+    profileImage!: string;
+
+    statusMessage!: string;
+  }
 }

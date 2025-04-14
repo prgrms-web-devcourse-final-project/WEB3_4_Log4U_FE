@@ -57,6 +57,18 @@ export class UserService {
     }
   }
 
+  static async updateProfile(body: User.UpdateProfileDto) {
+    try {
+      await axiosInstance.put<void, AxiosResponse<void>, User.UpdateProfileDto>(
+        '/users/profile/update',
+        body
+      );
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  }
+
   static async logout() {
     try {
       const response = await axiosInstance.post('/oauth2/logout');
