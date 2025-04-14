@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { UserService } from '@root/services/user';
 import { User } from '@root/types/user';
 import { Pagination } from '@root/types/pagination';
@@ -32,12 +32,23 @@ const UserItem = ({ user }: UserItemProps) => {
   );
 };
 
-export default function UserSearchPage() {
+// 로딩 상태 컴포넌트
+function UserSearchLoading() {
+  return (
+    <div className='flex justify-center items-center h-[300px]'>
+      <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900'></div>
+    </div>
+  );
+}
+
+// 실제 검색 기능을 수행하는 컴포넌트
+function UserSearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
 
   const [searchQuery, setSearchQuery] = useState(query);
+  const [searchType, setSearchType] = useState<'작가' | '내용'>('작가');
   const [users, setUsers] = useState<User.ISummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -50,7 +61,35 @@ export default function UserSearchPage() {
   // 검색 폼 제출 핸들러
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+    if (!searchQuery.trim()) return;
+
+    if (searchType === '작가') {
+      router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  // 검색 타입 변경 핸들러
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as '작가' | '내용';
+    setSearchType(newType);
+
+    // 타입이 변경되면 즉시 해당 페이지로 이동
+    if (newType === '내용') {
+      // 검색어가 있으면 쿼리와 함께, 없으면 그냥 이동
+      if (searchQuery.trim()) {
+        router.push(`/diaries/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push('/diaries/search');
+      }
+    } else {
+      if (searchQuery.trim()) {
+        router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
+      } else {
+        router.push('/users/search');
+      }
+    }
   };
 
   // 유저 검색 데이터 가져오기
@@ -128,40 +167,42 @@ export default function UserSearchPage() {
     <div className='w-full h-full flex flex-col overflow-y-auto'>
       <div className='p-4 max-w-3xl mx-auto w-full'>
         {/* 검색 입력 */}
-        <form onSubmit={handleSearch} className='mb-6'>
-          <div className='relative'>
+        <form onSubmit={handleSearch} className='flex items-center max-w-md mx-auto mb-6'>
+          <div className='relative flex items-center flex-grow'>
+            <select
+              className='absolute left-2 bg-transparent border-none appearance-none focus:outline-none pr-5 z-10'
+              value={searchType}
+              onChange={handleSearchTypeChange}
+            >
+              <option value='내용'>내용</option>
+              <option value='작가'>작가</option>
+            </select>
+            <div className='absolute left-12 w-4 h-4 pointer-events-none'>
+              <svg className='h-4 w-4 text-gray-500' viewBox='0 0 20 20' fill='currentColor'>
+                <path
+                  fillRule='evenodd'
+                  d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'
+                  clipRule='evenodd'
+                />
+              </svg>
+            </div>
             <input
               type='text'
-              placeholder='사용자 검색...'
-              className='w-full border border-gray-300 rounded-lg py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-gray-900'
+              placeholder='검색어를 입력하세요'
+              className='pl-20 pr-10 py-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
-            <svg
-              className='w-5 h-5 absolute left-3 top-2.5 text-gray-500'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-            >
+          </div>
+          <button type='submit' className='ml-2 p-2 bg-gray-200 rounded-md hover:bg-gray-300'>
+            <svg className='h-5 w-5 text-gray-700' viewBox='0 0 20 20' fill='currentColor'>
               <path
-                d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
-                strokeLinecap='round'
-                strokeLinejoin='round'
+                fillRule='evenodd'
+                d='M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z'
+                clipRule='evenodd'
               />
             </svg>
-            <button type='submit' className='absolute right-3 top-2 text-gray-500'>
-              <svg
-                className='w-5 h-5'
-                viewBox='0 0 24 24'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='2'
-              >
-                <path d='M5 12h14M12 5l7 7-7 7' strokeLinecap='round' strokeLinejoin='round' />
-              </svg>
-            </button>
-          </div>
+          </button>
         </form>
 
         {/* 사용자 목록 */}
@@ -187,5 +228,14 @@ export default function UserSearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 메인 페이지 컴포넌트 - Suspense로 감싸서 useSearchParams() 에러 해결
+export default function UserSearchPage() {
+  return (
+    <Suspense fallback={<UserSearchLoading />}>
+      <UserSearchContent />
+    </Suspense>
   );
 }
