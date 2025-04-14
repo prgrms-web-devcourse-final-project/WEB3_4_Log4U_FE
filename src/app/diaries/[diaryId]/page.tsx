@@ -35,7 +35,7 @@ export default function DiaryPage() {
         const userData = await UserService.getMe();
         setUser(userData);
 
-        setIsAuthor(diaryData?.userId === userData?.userId);
+        setIsAuthor(diaryData?.authorId === userData?.userId);
       } catch (error) {
         console.error('다이어리 로딩 중 오류 발생:', error);
         setError('다이어리를 불러오는 중 오류가 발생했습니다.');

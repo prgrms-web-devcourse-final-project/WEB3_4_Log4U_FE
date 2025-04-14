@@ -2,12 +2,14 @@
 
 import GoogleMapComponent from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
-import { UserService } from '@root/services/user';
 import { FollowService } from '@root/services/follow';
+import { MapService } from '@root/services/map';
+import { UserService } from '@root/services/user';
 import { Diary } from '@root/types/diary';
+import { Map } from '@root/types/map';
 import { User } from '@root/types/user';
 import Link from 'next/link';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FollowModal from './mypage/components/FollowModal';
 
 // 다이어리 카드 컴포넌트
@@ -15,9 +17,9 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
   <Link
     href={`/diaries/${diary.diaryId}`}
     key={diary.diaryId}
-    className='block border rounded-lg overflow-hidden hover:shadow-md transition'
+    className='block border rounded-lg overflow-hidden hover:shadow-md transition h-full'
   >
-    <div className='h-40 bg-gray-200 relative'>
+    <div className='h-52 bg-gray-200 relative'>
       {diary.thumbnailUrl ? (
         <img
           src={diary.thumbnailUrl}
@@ -31,11 +33,48 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
           className='w-full h-full object-cover'
         />
       )}
+      {/* 좋아요 수 - 이미지 우측 하단에 오버레이 */}
+      <div className='absolute bottom-2 right-2 bg-black bg-opacity-50 text-white rounded-full px-2 py-1 flex items-center text-xs'>
+        <svg className='w-3 h-3 mr-1' fill='currentColor' viewBox='0 0 20 20'>
+          <path
+            fillRule='evenodd'
+            d='M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z'
+            clipRule='evenodd'
+          />
+        </svg>
+        <span>{diary.likeCount || 0}</span>
+      </div>
     </div>
-    <div className='p-3 text-sm text-center text-gray-700'>
-      <div>다이어리 여행,</div>
-      <div>
-        {diary.dongmyun}, {Diary.WeatherMap[diary.weatherInfo]}
+    <div className='p-3 text-sm'>
+      {/* 다이어리 제목 */}
+      <h3 className='font-bold text-gray-800 truncate'>{diary.title || '제목 없음'}</h3>
+
+      <div className='flex items-center justify-between mt-2 text-xs text-gray-600'>
+        {/* 작성자 정보 */}
+        <div className='flex items-center'>
+          {diary.authorProfileImage && (
+            <div className='w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0'>
+              <img
+                src={diary.authorProfileImage}
+                alt={`${diary.authorNickname}의 프로필`}
+                className='w-full h-full object-cover'
+              />
+            </div>
+          )}
+          <span className='truncate max-w-[120px]'>
+            {diary.authorNickname || '작성자 정보 없음'}
+          </span>
+        </div>
+
+        {/* 위치 정보 - 일반 다이어리 카드 */}
+        <div
+          className='truncate max-w-[120px]'
+          title={`${diary.sido || ''} ${diary.sigungu || ''} ${diary.dongmyun || ''}`}
+        >
+          {diary.sigungu && diary.dongmyun
+            ? `${diary.sigungu} ${diary.dongmyun}`
+            : diary.dongmyun || diary.sigungu || '위치 정보 없음'}
+        </div>
       </div>
     </div>
   </Link>
@@ -45,11 +84,22 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
 const EmptyDiaryCard = ({ index }: { index: number }) => (
   <div
     key={`empty-${index}`}
-    className='border rounded overflow-hidden aspect-square flex flex-col h-[250px]'
+    className='block border rounded-lg overflow-hidden hover:shadow-md transition h-full'
   >
-    <div className='w-full flex-1 bg-gray-100'></div>
-    <div className='p-2 text-center text-sm text-gray-300 h-16 flex flex-col justify-center'>
-      <p>다이어리 없음</p>
+    <div className='h-52 bg-gray-100'></div>
+    <div className='p-3 text-sm'>
+      {/* 다이어리 제목 */}
+      <h3 className='font-bold text-gray-300 truncate'>제목 없음</h3>
+
+      <div className='flex items-center justify-between mt-2 text-xs text-gray-300'>
+        {/* 작성자 정보 */}
+        <div className='flex items-center'>
+          <span className='truncate max-w-[120px]'>작성자 정보 없음</span>
+        </div>
+
+        {/* 위치 정보 - 빈 다이어리 카드 */}
+        <div className='truncate max-w-[120px]'>위치 정보 없음</div>
+      </div>
     </div>
   </div>
 );
@@ -67,6 +117,17 @@ export default function HomePage() {
     title: '',
     isFollowers: true,
   });
+  // 지도 관련 상태 추가
+  const [zoomLevel, setZoomLevel] = useState(11); // 기본 줌 레벨
+  const [mapBounds, setMapBounds] = useState<{
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  } | null>(null);
+  const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
+  const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
+  const [mapLoading, setMapLoading] = useState(false);
 
   // IntersectionObserver를 위한 ref
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -201,6 +262,100 @@ export default function HomePage() {
       throw error;
     }
   };
+  // 줌 레벨 변경 처리 함수
+  const handleZoomChanged = useCallback((newZoom: number) => {
+    setZoomLevel(newZoom);
+  }, []);
+
+  // 맵 경계 변경 처리 함수
+  const handleBoundsChanged = useCallback(
+    (bounds: { north: number; south: number; east: number; west: number }) => {
+      setMapBounds(bounds);
+    },
+    []
+  );
+
+  // 맵 데이터 로드 함수 - 디바운싱 적용
+  const loadMapData = useCallback(async () => {
+    if (!mapBounds || mapLoading) return;
+
+    setMapLoading(true);
+    try {
+      const query: Map.GetListQueryDto = {
+        north: mapBounds.north,
+        south: mapBounds.south,
+        east: mapBounds.east,
+        west: mapBounds.west,
+        zoom: zoomLevel,
+      };
+
+      if (zoomLevel <= 13) {
+        // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드
+        const clusters = await MapService.getMyMapCluster(query);
+        setClusterData(clusters);
+        setMapDiaries([]);
+      } else {
+        // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드
+        const diaries = await MapService.getMyMapDiaries(query);
+        setMapDiaries(diaries);
+        setClusterData([]);
+      }
+    } catch (error) {
+      console.error('맵 데이터 로드 중 오류 발생:', error);
+    } finally {
+      setMapLoading(false);
+    }
+  }, [mapBounds, zoomLevel, mapLoading]);
+
+  // 맵 데이터 로드를 위한 디바운싱 타이머 참조
+  const mapDataTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
+  useEffect(() => {
+    // 이전 타이머가 있으면 취소
+    if (mapDataTimerRef.current) {
+      clearTimeout(mapDataTimerRef.current);
+    }
+
+    // mapBounds가 null이면 아직 맵이 준비되지 않은 상태
+    if (!mapBounds) return;
+
+    // 500ms 후에 데이터 로드 (디바운싱)
+    mapDataTimerRef.current = setTimeout(() => {
+      loadMapData();
+    }, 500);
+
+    // 컴포넌트 언마운트 시 타이머 정리
+    return () => {
+      if (mapDataTimerRef.current) {
+        clearTimeout(mapDataTimerRef.current);
+      }
+    };
+  }, [mapBounds, zoomLevel]);
+
+  // 맵에 표시할 마커 데이터 생성
+  const mapMarkers = useMemo(() => {
+    if (zoomLevel <= 13) {
+      // 클러스터 데이터 마커
+      return clusterData.map(cluster => ({
+        id: cluster.areaId,
+        lat: cluster.lat,
+        lng: cluster.lon,
+        profileUrl: '/hot-logger.png', // 클러스터 아이콘
+        count: cluster.diaryCount,
+        title: `${cluster.areaName} (${cluster.diaryCount}개)`,
+      }));
+    } else {
+      // 다이어리 마커
+      return mapDiaries.map(diary => ({
+        id: diary.diaryId,
+        lat: diary.latitude,
+        lng: diary.longitude,
+        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+        title: diary.title,
+      }));
+    }
+  }, [zoomLevel, clusterData, mapDiaries]);
 
   return (
     <div className='flex p-4'>
@@ -248,20 +403,20 @@ export default function HomePage() {
         {/* 다이어리 지도 제목 */}
         <div className='px-6 py-4 border-b'>
           <h2 className='text-xl font-bold'>다이어리 지도 - 경로 시각화</h2>
+          <p className='text-sm text-gray-500 mt-1'>
+            {zoomLevel <= 13
+              ? '지역별 다이어리 클러스터를 표시합니다. 확대하여 개별 다이어리를 확인하세요.'
+              : '개별 다이어리 위치를 표시합니다.'}
+          </p>
         </div>
 
         {/* 구글 맵 */}
         <GoogleMapComponent
-          markers={
-            diaries.map(diary => ({
-              id: diary.diaryId,
-              lat: diary.latitude,
-              lng: diary.longitude,
-              title: diary.title,
-              profileUrl: diary.thumbnailUrl,
-            })) ?? []
-          }
-        ></GoogleMapComponent>
+          markers={mapMarkers}
+          onZoomChanged={handleZoomChanged}
+          onBoundsChanged={handleBoundsChanged}
+          initialZoom={zoomLevel}
+        />
 
         {/* 공개된 다이어리 섹션 - 스크롤 가능한 별도 박스 */}
         <div className='px-6 py-4'>
