@@ -54,6 +54,17 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   // 모달 참조 및 외부 클릭 처리
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // 이미지 슬라이더 관련 상태
+  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+  const [mediaItems, setMediaItems] = useState<Diary.DiaryMedia[]>([]);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const [imageLoading, setImageLoading] = useState<boolean>(true);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const [animatedIndex, setAnimatedIndex] = useState<number | null>(null); // 애니메이션 중인 인덱스
+
   // 댓글 불러오기 함수
   const fetchComments = useCallback(
     async (cursorId?: number) => {
@@ -373,6 +384,100 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
+  // 이미지 슬라이더 컨트롤러
+  const goToNextImage = () => {
+    if (mediaItems.length <= 1 || isAnimating) return;
+    const nextIndex = (currentImageIndex + 1) % mediaItems.length;
+    setAnimatedIndex(nextIndex);
+    setSlideDirection('left');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentImageIndex(nextIndex);
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+        setAnimatedIndex(null);
+      }, 50);
+    }, 350); // 애니메이션이 절반 진행된 시점에 현재 인덱스 변경
+  };
+
+  const goToPrevImage = () => {
+    if (mediaItems.length <= 1 || isAnimating) return;
+    const prevIndex = (currentImageIndex - 1 + mediaItems.length) % mediaItems.length;
+    setAnimatedIndex(prevIndex);
+    setSlideDirection('right');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentImageIndex(prevIndex);
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+        setAnimatedIndex(null);
+      }, 50);
+    }, 350); // 애니메이션이 절반 진행된 시점에 현재 인덱스 변경
+  };
+
+  // 스와이프 핸들러
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+
+    const difference = touchStartX - touchEndX;
+    const minSwipeDistance = 50; // 최소 스와이프 거리
+
+    if (difference > minSwipeDistance && !isAnimating) {
+      // 왼쪽으로 스와이프 -> 다음 이미지
+      goToNextImage();
+    } else if (difference < -minSwipeDistance && !isAnimating) {
+      // 오른쪽으로 스와이프 -> 이전 이미지
+      goToPrevImage();
+    }
+
+    // 터치 상태 초기화
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
+  // 다이어리의 미디어 목록 설정
+  useEffect(() => {
+    if (diary && diary.mediaList) {
+      setMediaItems(diary.mediaList);
+    }
+  }, [diary]);
+
+  // 키보드 화살표 키로 이미지 이동
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        goToPrevImage();
+      } else if (e.key === 'ArrowRight') {
+        goToNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mediaItems.length]);
+
+  // 이미지가 로드될 때마다 로딩 상태 초기화
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  // 이미지 인덱스가 변경될 때마다 로딩 상태 재설정
+  useEffect(() => {
+    setImageLoading(true);
+  }, [currentImageIndex]);
+
   if (!diary) {
     return null;
   }
@@ -396,13 +501,196 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
         ref={modalRef}
         className='flex w-full max-w-6xl h-[80vh] bg-white rounded-lg overflow-hidden shadow-xl'
       >
-        {/* 좌측: 다이어리 이미지 */}
+        {/* 좌측: 다이어리 이미지 슬라이더 */}
         <div className='w-3/5 bg-black relative'>
-          <img
-            src={diary.thumbnailUrl}
-            alt='다이어리 썸네일'
-            className='w-full h-full object-contain'
-          />
+          {mediaItems.length > 0 ? (
+            <>
+              <div
+                ref={imageContainerRef}
+                className='h-full w-full relative overflow-hidden'
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {/* 현재 이미지 */}
+                <div
+                  className={`w-full h-full absolute transition-all duration-300 ease-in-out ${
+                    slideDirection === 'left'
+                      ? '-translate-x-full opacity-0'
+                      : slideDirection === 'right'
+                        ? 'translate-x-full opacity-0'
+                        : 'translate-x-0 opacity-100'
+                  }`}
+                >
+                  {mediaItems[currentImageIndex]?.contentType?.startsWith('video/') ? (
+                    <video
+                      key={`video-${currentImageIndex}`}
+                      src={mediaItems[currentImageIndex].fileUrl}
+                      className='w-full h-full object-contain'
+                      controls
+                      autoPlay
+                    />
+                  ) : (
+                    <>
+                      <img
+                        key={`img-${currentImageIndex}`}
+                        src={mediaItems[currentImageIndex]?.fileUrl || diary.thumbnailUrl}
+                        alt={`다이어리 이미지 ${currentImageIndex + 1}`}
+                        className='w-full h-full object-contain'
+                        onLoad={handleImageLoad}
+                      />
+                      {/* 이미지 로딩 표시 */}
+                      {imageLoading && (
+                        <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-30'>
+                          <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white'></div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* 애니메이션 중인 다음/이전 이미지 */}
+                {isAnimating && animatedIndex !== null && (
+                  <div
+                    className={`w-full h-full absolute transition-all duration-300 ease-in-out ${
+                      slideDirection === 'left'
+                        ? 'translate-x-full opacity-0 animate-slide-from-right'
+                        : slideDirection === 'right'
+                          ? '-translate-x-full opacity-0 animate-slide-from-left'
+                          : ''
+                    }`}
+                  >
+                    {mediaItems[animatedIndex]?.contentType?.startsWith('video/') ? (
+                      <video
+                        key={`video-${animatedIndex}`}
+                        src={mediaItems[animatedIndex].fileUrl}
+                        className='w-full h-full object-contain'
+                        controls
+                        autoPlay={false}
+                      />
+                    ) : (
+                      <img
+                        key={`img-${animatedIndex}`}
+                        src={mediaItems[animatedIndex]?.fileUrl || diary.thumbnailUrl}
+                        alt={`다이어리 이미지 ${animatedIndex + 1}`}
+                        className='w-full h-full object-contain'
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* CSS 애니메이션 정의 */}
+              <style jsx>{`
+                @keyframes slide-from-right {
+                  0% {
+                    transform: translateX(100%);
+                    opacity: 0;
+                  }
+                  100% {
+                    transform: translateX(0);
+                    opacity: 1;
+                  }
+                }
+
+                @keyframes slide-from-left {
+                  0% {
+                    transform: translateX(-100%);
+                    opacity: 0;
+                  }
+                  100% {
+                    transform: translateX(0);
+                    opacity: 1;
+                  }
+                }
+
+                .animate-slide-from-right {
+                  animation: slide-from-right 0.35s ease-in-out forwards;
+                }
+
+                .animate-slide-from-left {
+                  animation: slide-from-left 0.35s ease-in-out forwards;
+                }
+              `}</style>
+
+              {/* 이미지 슬라이더 컨트롤 */}
+              {mediaItems.length > 1 && (
+                <>
+                  {/* 이전 이미지 버튼 */}
+                  <button
+                    onClick={goToPrevImage}
+                    className='absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70 transition'
+                    aria-label='이전 이미지'
+                  >
+                    <svg
+                      xmlns='http://www.w3.org/2000/svg'
+                      className='h-6 w-6'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      stroke='currentColor'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M15 19l-7-7 7-7'
+                      />
+                    </svg>
+                  </button>
+
+                  {/* 다음 이미지 버튼 */}
+                  <button
+                    onClick={goToNextImage}
+                    className='absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70 transition'
+                    aria-label='다음 이미지'
+                  >
+                    <svg
+                      xmlns='http://www.w3.org/2000/svg'
+                      className='h-6 w-6'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      stroke='currentColor'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M9 5l7 7-7 7'
+                      />
+                    </svg>
+                  </button>
+
+                  {/* 이미지 인덱스 표시 */}
+                  <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm'>
+                    {currentImageIndex + 1} / {mediaItems.length}
+                  </div>
+
+                  {/* 썸네일 목록 */}
+                  <div className='absolute bottom-16 left-0 right-0 flex justify-center overflow-x-auto bg-black bg-opacity-50 py-2 px-4'>
+                    <div className='flex space-x-2 max-w-full'>
+                      {mediaItems.map((media, index) => (
+                        <div
+                          key={media.mediaId}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`h-16 w-16 flex-shrink-0 cursor-pointer border-2 transition-all ${index === currentImageIndex ? 'border-white' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                        >
+                          <img
+                            src={media.fileUrl}
+                            alt={`썸네일 ${index + 1}`}
+                            className='h-full w-full object-cover'
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className='w-full h-full flex items-center justify-center bg-gray-200 text-gray-500'>
+              이미지가 없습니다
+            </div>
+          )}
         </div>
 
         {/* 우측: 다이어리 정보 및 댓글 */}
