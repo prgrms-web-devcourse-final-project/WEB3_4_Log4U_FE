@@ -283,7 +283,7 @@ const DiaryCreatePage: FC = () => {
 
       await DiaryService.createDiary(formData);
       // 성공 시 다이어리 목록 페이지로 이동
-      router.push('/diaries');
+      router.push('/');
     } catch (error) {
       console.error('다이어리 생성 중 오류 발생:', error);
       setErrorMessage('다이어리 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
