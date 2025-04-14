@@ -7,6 +7,7 @@ import { DiaryService } from '../../../../services/diary';
 import { MediaService } from '../../../../services/media';
 import { useRouter } from 'next/navigation';
 import { v4 } from 'uuid';
+import { MapService } from '../../../../services/map';
 
 const DiaryCreatePage: FC = () => {
   const router = useRouter();
@@ -66,52 +67,6 @@ const DiaryCreatePage: FC = () => {
     setContent(e.target.value);
   };
 
-  // 역지오코딩을 통해 좌표에서 주소 정보 가져오기
-  const getAddressFromCoords = async (lat: number, lng: number) => {
-    console.log('getAddressFromCoords', lat, lng);
-    try {
-      // 네이버 지도 API 클라이언트 ID와 Secret
-      const clientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
-      const clientSecret = process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        throw new Error('네이버 지도 API 키가 설정되지 않았습니다.');
-      }
-
-      // 네이버 지도 API 역지오코딩 요청
-      const response = await fetch(
-        `https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc?coords=${lng},${lat}&output=json`,
-        {
-          headers: {
-            'X-NCP-APIGW-API-KEY-ID': clientId,
-            'X-NCP-APIGW-API-KEY': clientSecret,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok && data.status?.code === 0) {
-        // 네이버 API 응답 구조에서 필요한 데이터 추출
-        const results = data.results?.[0];
-        const region = results?.region;
-
-        // 시도, 시군구, 읍면동 추출
-        const sido = region?.area1?.name || ''; // 시/도 (서울특별시, 경기도 등)
-        const sigungu = region?.area2?.name || ''; // 시/군/구 (강남구, 성남시 등)
-        const eupmyeondong = region?.area3?.name || ''; // 읍/면/동 (역삼동, 수서동 등)
-
-        console.log('네이버 지도 API 응답:', { sido, sigungu, eupmyeondong });
-        return { sido, sigungu, eupmyeondong };
-      } else {
-        console.error('네이버 지도 API 오류:', data);
-        throw new Error('주소를 찾을 수 없습니다');
-      }
-    } catch (error) {
-      console.error('역지오코딩 오류:', error);
-    }
-  };
-
   // 위치 정보 새로고침
   const refreshLocation = async () => {
     console.log('refreshLocation');
@@ -120,7 +75,6 @@ const DiaryCreatePage: FC = () => {
 
     try {
       // 안전한 출처 확인 (localhost, 127.0.0.1, 또는 특정 EC2 도메인)
-
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -132,18 +86,26 @@ const DiaryCreatePage: FC = () => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      // TODO: 역지오코딩 API 응답 실패 시 임시 데이터 사용
       try {
-        // 역지오코딩으로 주소 가져오기
-        const address = await getAddressFromCoords(lat, lng);
+        // MapService를 사용하여 위치 정보 가져오기
+        const geoData = await MapService.getGeolocation(lat, lng);
 
-        setLocation({
-          latitude: lat,
-          longitude: lng,
-          sido: address?.sido || '알 수 없음',
-          sigungu: address?.sigungu || '알 수 없음',
-          eupmyeondong: address?.eupmyeondong || '알 수 없음',
-        });
+        if (geoData && geoData.results && geoData.results.length > 0) {
+          const result = geoData.results[0];
+          const sido = result.region.area1?.name || '알 수 없음';
+          const sigungu = result.region.area2?.name || '알 수 없음';
+          const eupmyeondong = result.region.area3?.name || '알 수 없음';
+
+          setLocation({
+            latitude: lat,
+            longitude: lng,
+            sido: sido,
+            sigungu: sigungu,
+            eupmyeondong: eupmyeondong,
+          });
+        } else {
+          throw new Error('위치 정보를 찾을 수 없습니다.');
+        }
       } catch (geoError) {
         console.error('역지오코딩 오류:', geoError);
         setLocation({

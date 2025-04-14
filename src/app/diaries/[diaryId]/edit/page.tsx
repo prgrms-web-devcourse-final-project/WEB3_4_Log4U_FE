@@ -6,6 +6,7 @@ import { Diary } from '@root/types/diary';
 import { DiaryService } from '@root/services/diary';
 import { MediaService } from '@root/services/media';
 import { v4 } from 'uuid';
+import { MapService } from '@root/services/map';
 
 const DiaryEditPage: FC = () => {
   const params = useParams();
@@ -36,6 +37,8 @@ const DiaryEditPage: FC = () => {
     eupmyeondong: '역삼동',
   });
   const [loading, setLoading] = useState<boolean>(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [mediaList, setMediaList] = useState<Diary.DiaryMedia.MutateDto[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -273,6 +276,66 @@ const DiaryEditPage: FC = () => {
     return tags.map(tag => `#${tag}`).join(' ');
   };
 
+  // 위치 정보 새로고침 함수 추가
+  const refreshLocation = async () => {
+    setIsLoadingLocation(true);
+    setLocationError(null);
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        });
+      });
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      try {
+        // MapService를 사용하여 위치 정보 가져오기
+        const geoData = await MapService.getGeolocation(lat, lng);
+
+        if (geoData && geoData.results && geoData.results.length > 0) {
+          const result = geoData.results[0];
+          const sido = result.region.area1?.name || '알 수 없음';
+          const sigungu = result.region.area2?.name || '알 수 없음';
+          const eupmyeondong = result.region.area3?.name || '알 수 없음';
+
+          setLocation({
+            latitude: lat,
+            longitude: lng,
+            sido: sido,
+            sigungu: sigungu,
+            eupmyeondong: eupmyeondong,
+          });
+        } else {
+          throw new Error('위치 정보를 찾을 수 없습니다.');
+        }
+      } catch (geoError) {
+        console.error('역지오코딩 오류:', geoError);
+        setLocation(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+        }));
+        setLocationError('주소 정보를 가져오는데 실패했습니다. 위치 좌표만 기록됩니다.');
+      }
+    } catch (error) {
+      console.error('위치 정보 가져오기 실패:', error);
+      if (error instanceof Error) {
+        setLocationError(
+          error.message || '위치 정보를 가져오는데 실패했습니다. 권한을 확인해주세요.'
+        );
+      } else {
+        setLocationError('위치 정보를 가져오는데 실패했습니다. 권한을 확인해주세요.');
+      }
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
   if (loading && !isUploading) {
     return (
       <div className='flex justify-center items-center h-screen'>
@@ -333,11 +396,28 @@ const DiaryEditPage: FC = () => {
       <div className='grid grid-cols-2 gap-4 mb-4'>
         <div>
           <label className='block mb-1'>위치</label>
-          <select className='w-full border border-gray-300 rounded p-2'>
-            <option value={`${location.sido} ${location.sigungu}`}>
-              {location.sido} {location.sigungu}
-            </option>
-          </select>
+          <div className='flex items-center gap-2'>
+            <div className='w-full'>
+              <div className='p-2 bg-gray-50 border border-gray-300 rounded'>
+                <p className='text-gray-700 font-medium text-sm'>
+                  {location.sido} {location.sigungu} {location.eupmyeondong}
+                </p>
+                {locationError && <p className='text-xs text-red-500 mt-1'>{locationError}</p>}
+              </div>
+            </div>
+            <button
+              type='button'
+              onClick={refreshLocation}
+              className='text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 whitespace-nowrap flex-shrink-0'
+              disabled={isLoadingLocation}
+            >
+              {isLoadingLocation ? (
+                <span className='inline-block w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin'></span>
+              ) : (
+                '위치 갱신'
+              )}
+            </button>
+          </div>
         </div>
         <div>
           <label className='block mb-1'>태그</label>
