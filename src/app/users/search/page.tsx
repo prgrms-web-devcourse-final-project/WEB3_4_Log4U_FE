@@ -17,7 +17,7 @@ const UserItem = ({ user }: UserItemProps) => {
       <Link href={`/users/${user.nickname}`} className='flex items-center w-full'>
         <div className='w-12 h-12 rounded-full overflow-hidden mr-4'>
           <img
-            src={user.profileImage || '/test-profile.png'}
+            src={user?.profileImage ?? '/test-profile.svg'}
             alt={`${user.nickname}의 프로필`}
             className='w-full h-full object-cover'
           />

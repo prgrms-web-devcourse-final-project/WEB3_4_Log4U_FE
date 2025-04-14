@@ -59,10 +59,7 @@ export class UserService {
 
   static async updateProfile(body: User.UpdateProfileDto) {
     try {
-      await axiosInstance.put<void, AxiosResponse<void>, User.UpdateProfileDto>(
-        '/users/profile/update',
-        body
-      );
+      await axiosInstance.put<void, AxiosResponse<void>, User.UpdateProfileDto>('/users/me', body);
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
