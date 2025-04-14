@@ -107,7 +107,9 @@ function UserSearchContent() {
           params.cursorId = cursorId;
         }
 
-        const response = await UserService.getUsers(searchQuery);
+        // @todo 유저 검색 API 추가 필요.
+        const response = {} as unknown as any;
+        //  await UserService.getUsers(searchQuery);
 
         if (reset) {
           setUsers(response.list || []);

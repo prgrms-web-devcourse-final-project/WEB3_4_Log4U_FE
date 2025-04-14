@@ -178,7 +178,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
     try {
       assert(diary, '다이어리가 존재하지 않습니다.');
-      await DiaryService.deleteDiary(diary.diaryId.toString());
+      await DiaryService.deleteDiary(diary.diaryId);
 
       router.push('/diaries');
     } catch (err) {
