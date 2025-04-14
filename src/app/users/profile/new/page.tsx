@@ -172,18 +172,24 @@ export default function ProfileSetupPage() {
   }, [nickname]);
 
   return (
-    <div className='min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8'>
+    <div
+      className='min-h-screen py-12 px-4 sm:px-6 lg:px-8'
+      style={{ backgroundColor: 'var(--color-neutral)' }}
+    >
       <div className='max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden'>
-        <div className='bg-indigo-600 px-6 py-4'>
+        <div className='px-6 py-4' style={{ backgroundColor: 'var(--color-primary)' }}>
           <h2 className='text-xl font-bold text-white text-center'>프로필 설정</h2>
-          <p className='text-indigo-200 text-center mt-1'>Log4U에서 사용할 프로필을 설정해주세요</p>
+          <p className='text-center mt-1' style={{ color: 'var(--color-secondary)' }}>
+            Log4U에서 사용할 프로필을 설정해주세요
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className='px-6 py-8 space-y-6'>
           {/* 프로필 이미지 업로드 */}
           <div className='flex flex-col items-center'>
             <div
-              className='w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer relative overflow-hidden group'
+              className='w-32 h-32 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden group'
+              style={{ borderColor: 'var(--color-secondary)' }}
               onClick={() => fileInputRef.current?.click()}
             >
               {previewImage ? (
@@ -197,10 +203,11 @@ export default function ProfileSetupPage() {
                 <div className='text-center'>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
-                    className='h-10 w-10 text-gray-400 mx-auto'
+                    className='h-10 w-10 mx-auto'
                     fill='none'
                     viewBox='0 0 24 24'
                     stroke='currentColor'
+                    style={{ color: 'var(--color-primary)' }}
                   >
                     <path
                       strokeLinecap='round'
@@ -215,7 +222,9 @@ export default function ProfileSetupPage() {
                       d='M15 13a3 3 0 11-6 0 3 3 0 016 0z'
                     />
                   </svg>
-                  <p className='text-xs text-gray-500 mt-1'>이미지 추가</p>
+                  <p className='text-xs mt-1' style={{ color: 'var(--color-text)' }}>
+                    이미지 추가
+                  </p>
                 </div>
               )}
 
@@ -233,11 +242,14 @@ export default function ProfileSetupPage() {
               <div className='mt-2 w-full max-w-xs'>
                 <div className='w-full bg-gray-200 rounded-full h-2.5'>
                   <div
-                    className='bg-indigo-600 h-2.5 rounded-full transition-all duration-300'
-                    style={{ width: `${uploadProgress}%` }}
+                    className='h-2.5 rounded-full transition-all duration-300'
+                    style={{
+                      width: `${uploadProgress}%`,
+                      backgroundColor: 'var(--color-primary)',
+                    }}
                   ></div>
                 </div>
-                <p className='text-xs text-gray-500 text-center mt-1'>
+                <p className='text-xs text-center mt-1' style={{ color: 'var(--color-text)' }}>
                   {uploadProgress < 100 ? '업로드 중...' : '업로드 완료!'}
                 </p>
               </div>
@@ -247,23 +259,31 @@ export default function ProfileSetupPage() {
           {/* 닉네임 입력 */}
           <div>
             <div className='flex justify-between items-end mb-1'>
-              <label htmlFor='nickname' className='block text-sm font-medium text-gray-700'>
+              <label
+                htmlFor='nickname'
+                className='block text-sm font-medium'
+                style={{ color: 'var(--color-text)' }}
+              >
                 닉네임
               </label>
-              <span className='text-xs text-gray-500'>2~20자 이내</span>
+              <span className='text-xs' style={{ color: 'var(--color-text)' }}>
+                2~20자 이내
+              </span>
             </div>
             <div className='relative rounded-md shadow-sm'>
               <input
                 type='text'
                 id='nickname'
                 name='nickname'
-                className={`block w-full px-4 py-3 rounded-md border ${
-                  nicknameError
-                    ? 'border-red-300'
+                className='block w-full px-4 py-3 rounded-md border focus:outline-none'
+                style={{
+                  borderColor: nicknameError
+                    ? '#f87171'
                     : nicknameAvailable
-                      ? 'border-green-300'
-                      : 'border-gray-300'
-                } focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                      ? '#10b981'
+                      : 'var(--color-secondary)',
+                  color: 'var(--color-text)',
+                }}
                 placeholder='사용할 닉네임을 입력해주세요'
                 value={nickname}
                 onChange={e => setNickname(e.target.value)}
@@ -273,7 +293,14 @@ export default function ProfileSetupPage() {
               <div className='absolute inset-y-0 right-0 flex items-center'>
                 <button
                   type='button'
-                  className='h-full px-3 bg-indigo-600 text-white text-sm rounded-r-md hover:bg-indigo-700 focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed'
+                  className='h-full px-3 text-white text-sm rounded-r-md focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed transition-colors'
+                  style={{
+                    backgroundColor:
+                      !nickname.trim() || nicknameChecking
+                        ? 'var(--color-secondary)'
+                        : 'var(--color-primary)',
+                    color: 'white',
+                  }}
                   onClick={checkNickname}
                   disabled={!nickname.trim() || nicknameChecking}
                 >
@@ -313,16 +340,26 @@ export default function ProfileSetupPage() {
           {/* 상태 메시지 입력 */}
           <div>
             <div className='flex justify-between items-end mb-1'>
-              <label htmlFor='statusMessage' className='block text-sm font-medium text-gray-700'>
+              <label
+                htmlFor='statusMessage'
+                className='block text-sm font-medium'
+                style={{ color: 'var(--color-text)' }}
+              >
                 상태 메시지
               </label>
-              <span className='text-xs text-gray-500'>{statusMessage.length}/150자</span>
+              <span className='text-xs' style={{ color: 'var(--color-text)' }}>
+                {statusMessage.length}/150자
+              </span>
             </div>
             <textarea
               id='statusMessage'
               name='statusMessage'
               rows={3}
-              className='block w-full px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 resize-none'
+              className='block w-full px-4 py-3 rounded-md border focus:outline-none resize-none'
+              style={{
+                borderColor: 'var(--color-secondary)',
+                color: 'var(--color-text)',
+              }}
               placeholder='자신을 표현하는 상태 메시지를 작성해보세요'
               value={statusMessage}
               onChange={e => setStatusMessage(e.target.value)}
@@ -334,7 +371,13 @@ export default function ProfileSetupPage() {
           <div>
             <button
               type='submit'
-              className='w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed transition-colors'
+              className='w-full py-3 px-4 text-white font-medium rounded-md shadow-sm focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed transition-colors'
+              style={{
+                backgroundColor:
+                  isSubmitting || isUploading || !nicknameAvailable || !profileImage
+                    ? 'var(--color-secondary)'
+                    : 'var(--color-primary)',
+              }}
               disabled={isSubmitting || isUploading || !nicknameAvailable || !profileImage}
             >
               {isSubmitting ? (
