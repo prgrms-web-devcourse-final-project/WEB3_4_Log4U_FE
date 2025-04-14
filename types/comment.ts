@@ -4,13 +4,13 @@ export namespace Comment {
 
     content: string;
 
-    author?: {
-      userId: number;
+    userId: number;
 
-      nickname: string;
+    userName: string;
 
-      thumbnailUrl: string;
-    };
+    userProfileImage: string;
+
+    createdAt: string;
   }
 
   export interface Detail extends Summary {}

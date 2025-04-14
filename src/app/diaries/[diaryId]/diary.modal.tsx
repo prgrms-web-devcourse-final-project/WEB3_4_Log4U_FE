@@ -25,7 +25,8 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   const router = useRouter();
 
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  // 에러 메시지 상태 (알림으로 표시)
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [comments, setComments] = useState<Comment.Summary[]>([]);
 
@@ -34,6 +35,10 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   const [reportType, setReportType] = useState<Report.Type>(Report.Type.INAPPROPRIATE_CONTENT);
   const [reportContent, setReportContent] = useState<string>('');
   const reportModalRef = useRef<HTMLDivElement>(null);
+
+  // 댓글 신고 관련 상태
+  const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
+  const [isCommentReport, setIsCommentReport] = useState<boolean>(false);
 
   // 무한 스크롤을 위한 상태 추가
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -80,6 +85,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
         }
       } catch (err) {
         console.error('댓글 로딩 중 오류 발생:', err);
+        setErrorMessage('댓글을 불러오는 중 오류가 발생했습니다.');
       } finally {
         setCommentsLoading(false);
       }
@@ -178,7 +184,9 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       router.push('/diaries');
     } catch (err) {
       console.error('다이어리 삭제 중 오류 발생:', err);
-      setError('다이어리를 삭제하는 중 오류가 발생했습니다.');
+      const errorMsg = '다이어리를 삭제하는 중 오류가 발생했습니다.';
+      setErrorMessage(errorMsg);
+      alert(errorMsg);
     } finally {
       setIsActionLoading(false);
     }
@@ -186,6 +194,15 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
   // 신고 핸들러
   const handleReport = () => {
+    setIsCommentReport(false);
+    setSelectedCommentId(null);
+    setShowReportModal(true);
+  };
+
+  // 댓글 신고 핸들러
+  const handleCommentReport = (commentId: number) => {
+    setIsCommentReport(true);
+    setSelectedCommentId(commentId);
     setShowReportModal(true);
   };
 
@@ -204,12 +221,22 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
         content: reportContent,
       };
 
-      await ReportService.reportDiary(diaryId, reportData);
+      if (isCommentReport && selectedCommentId) {
+        // 댓글 신고 - API가 구현됨
+        await ReportService.reportComment(selectedCommentId.toString(), reportData);
+      } else {
+        // 다이어리 신고
+        await ReportService.reportDiary(diaryId, reportData);
+      }
       alert('신고가 접수되었습니다.');
       handleCloseReportModal();
     } catch (err) {
-      console.error('다이어리 신고 중 오류 발생:', err);
-      setError('다이어리를 신고하는 중 오류가 발생했습니다.');
+      console.error('신고 중 오류 발생:', err);
+      const errorMsg = isCommentReport
+        ? '댓글 신고 중 오류가 발생했습니다.'
+        : '다이어리를 신고하는 중 오류가 발생했습니다.';
+      setErrorMessage(errorMsg);
+      alert(errorMsg);
     } finally {
       setIsActionLoading(false);
     }
@@ -220,6 +247,8 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     setShowReportModal(false);
     setReportType(Report.Type.INAPPROPRIATE_CONTENT);
     setReportContent('');
+    setIsCommentReport(false);
+    setSelectedCommentId(null);
   };
 
   // 모달 외부 클릭 시 닫기
@@ -254,9 +283,30 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       setComment('');
     } catch (err) {
       console.error('댓글 작성 중 오류 발생:', err);
-      setError('댓글을 작성하는 중 오류가 발생했습니다.');
+      const errorMsg = '댓글을 작성하는 중 오류가 발생했습니다.';
+      setErrorMessage(errorMsg);
+      alert(errorMsg);
     } finally {
       setIsActionLoading(false);
+    }
+  };
+
+  // 댓글 삭제 핸들러
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm('정말로 이 댓글을 삭제하시겠습니까?')) return;
+
+    try {
+      // 댓글 삭제 API 호출
+      await CommentService.deleteComment(commentId.toString());
+
+      // 댓글 목록에서 삭제된 댓글 제거
+      setComments(prev => prev.filter(comment => comment.commentId !== commentId));
+      alert('댓글이 삭제되었습니다.');
+    } catch (err) {
+      console.error('댓글 삭제 중 오류 발생:', err);
+      const errorMsg = '댓글을 삭제하는 중 오류가 발생했습니다.';
+      setErrorMessage(errorMsg);
+      alert(errorMsg);
     }
   };
 
@@ -282,6 +332,8 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       }
     } catch (err) {
       console.error('좋아요 처리 중 오류 발생:', err);
+      const errorMsg = '좋아요 처리 중 오류가 발생했습니다.';
+      setErrorMessage(errorMsg);
     }
   };
 
@@ -329,6 +381,15 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   // 다이어리 작성자 정보 표시
   const authorName = diary.authorNickname;
   const locationText = diary?.dongmyun || '위치 정보 없음';
+
+  // 현재 로그인한 사용자 ID
+  const currentUserId = user?.userId;
+
+  // 에러 메시지 표시
+  if (errorMessage) {
+    // 에러 메시지는 alert()로 표시하고 있으므로 여기서는 초기화만 함
+    setErrorMessage('');
+  }
 
   return (
     <div className='fixed inset-0 bg-opacity-75 z-50 flex justify-center items-center p-4'>
@@ -399,36 +460,89 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
           <div ref={commentsContainerRef} className='flex-1 overflow-y-auto'>
             {comments.length > 0 ? (
               comments.map(comment => (
-                <div
-                  key={comment.commentId}
-                  className='p-4 border-b flex items-center justify-between'
-                >
-                  <div className='flex items-center'>
-                    <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
-                      {comment.author?.thumbnailUrl ? (
-                        <img
-                          src={comment.author?.thumbnailUrl}
-                          alt={`${comment.author?.nickname}의 프로필`}
-                          className='w-full h-full object-cover'
-                        />
-                      ) : (
-                        <svg
-                          xmlns='http://www.w3.org/2000/svg'
-                          className='h-full w-full text-gray-400 bg-gray-300'
-                          viewBox='0 0 20 20'
-                          fill='currentColor'
-                        >
-                          <path
-                            fillRule='evenodd'
-                            d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z'
-                            clipRule='evenodd'
+                <div key={comment.commentId} className='p-4 border-b'>
+                  <div className='flex items-start justify-between'>
+                    <div className='flex items-start'>
+                      <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200 flex-shrink-0'>
+                        {comment.userProfileImage ? (
+                          <img
+                            src={comment.userProfileImage}
+                            alt={`${comment.userName}의 프로필`}
+                            className='w-full h-full object-cover'
                           />
-                        </svg>
-                      )}
+                        ) : (
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            className='h-full w-full text-gray-400 bg-gray-300'
+                            viewBox='0 0 20 20'
+                            fill='currentColor'
+                          >
+                            <path
+                              fillRule='evenodd'
+                              d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z'
+                              clipRule='evenodd'
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <div className='flex items-baseline'>
+                          <span className='font-medium mr-2'>{comment.userName}</span>
+                          <span className='text-xs text-gray-500'>
+                            {formatDate(comment.createdAt)}
+                          </span>
+                        </div>
+                        <div className='text-gray-700 mt-1'>{comment.content}</div>
+                      </div>
                     </div>
-                    <div className='flex items-center'>
-                      <span className='font-medium mr-2'>{comment.author?.nickname}</span>
-                      <span className='text-gray-600'>{comment.content}</span>
+
+                    {/* 내 댓글이면 삭제 버튼, 아니면 신고 버튼 */}
+                    <div>
+                      {currentUserId === comment.userId ? (
+                        <button
+                          onClick={() => handleDeleteComment(comment.commentId)}
+                          className='text-gray-500 hover:text-red-500'
+                          title='댓글 삭제'
+                        >
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            className='h-5 w-5'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                          >
+                            <path d='M3 6h18'></path>
+                            <path d='M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6'></path>
+                            <path d='M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2'></path>
+                            <line x1='10' y1='11' x2='10' y2='17'></line>
+                            <line x1='14' y1='11' x2='14' y2='17'></line>
+                          </svg>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCommentReport(comment.commentId)}
+                          className='text-gray-500 hover:text-orange-500'
+                          title='댓글 신고'
+                        >
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            className='h-5 w-5'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                          >
+                            <path d='M12 2.69l5.66 5.66a8 8 0 11-11.31 0z'></path>
+                            <line x1='12' y1='9' x2='12' y2='13'></line>
+                            <line x1='12' y1='17' x2='12.01' y2='17'></line>
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -560,7 +674,9 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       {showReportModal && (
         <div className='fixed inset-0 bg-opacity-50 flex justify-center items-center z-50'>
           <div ref={reportModalRef} className='bg-white rounded-lg w-96 p-6 shadow-xl'>
-            <div className='text-xl font-semibold mb-4'>신고하기</div>
+            <div className='text-xl font-semibold mb-4'>
+              {isCommentReport ? '댓글 신고하기' : '다이어리 신고하기'}
+            </div>
 
             <div className='mb-4'>
               <label className='block text-sm font-medium text-gray-700 mb-1'>신고 이유</label>
