@@ -177,7 +177,7 @@ const FollowModal: React.FC<FollowModalProps> = ({
                   <div className='flex items-center'>
                     <div className='w-12 h-12 rounded-full overflow-hidden'>
                       <img
-                        src={follow.thumbNail || '/test-profile.png'}
+                        src={follow.thumbNail || '/public/test-profile.svg'}
                         alt={`${follow.nickname}의 프로필`}
                         className='w-full h-full object-cover'
                       />

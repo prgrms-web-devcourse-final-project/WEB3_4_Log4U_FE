@@ -1,5 +1,6 @@
 import { User } from '@root/types/user';
 import { axiosInstance } from './axios.instance';
+import { AxiosResponse } from 'axios';
 
 export class UserService {
   private static GET_ME_API = '/users/me';
@@ -28,6 +29,39 @@ export class UserService {
       return data;
     } catch (error) {
       console.error('Error fetching user:', error);
+      throw error;
+    }
+  }
+
+  static async validateNickname(nickname: string): Promise<{ available: boolean }> {
+    try {
+      const { data } = await axiosInstance.get<{ available: boolean }>(
+        `/users/validation/${nickname}`
+      );
+      return data;
+    } catch (error) {
+      console.error('Error checking nickname:', error);
+      throw error;
+    }
+  }
+
+  static async createProfile(body: User.CreateProfileDto) {
+    try {
+      await axiosInstance.post<void, AxiosResponse<void>, User.CreateProfileDto>(
+        '/users/profile/make',
+        body
+      );
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      throw error;
+    }
+  }
+
+  static async updateProfile(body: User.UpdateProfileDto) {
+    try {
+      await axiosInstance.put<void, AxiosResponse<void>, User.UpdateProfileDto>('/users/me', body);
+    } catch (error) {
+      console.error('Error updating profile:', error);
       throw error;
     }
   }

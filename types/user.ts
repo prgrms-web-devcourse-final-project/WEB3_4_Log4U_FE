@@ -30,4 +30,18 @@ export namespace User {
 
     thumbNail: string;
   }
+
+  export class CreateProfileDto {
+    nickname!: string;
+
+    statusMessage!: string;
+
+    profileImage!: string;
+  }
+
+  export class UpdateProfileDto {
+    profileImage!: string;
+
+    statusMessage!: string;
+  }
 }
