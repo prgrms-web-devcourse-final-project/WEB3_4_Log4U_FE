@@ -61,6 +61,9 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoading, setImageLoading] = useState<boolean>(true);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const [animatedIndex, setAnimatedIndex] = useState<number | null>(null); // 애니메이션 중인 인덱스
 
   // 댓글 불러오기 함수
   const fetchComments = useCallback(
@@ -383,13 +386,35 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
   // 이미지 슬라이더 컨트롤러
   const goToNextImage = () => {
-    if (mediaItems.length === 0) return;
-    setCurrentImageIndex(prevIndex => (prevIndex + 1) % mediaItems.length);
+    if (mediaItems.length <= 1 || isAnimating) return;
+    const nextIndex = (currentImageIndex + 1) % mediaItems.length;
+    setAnimatedIndex(nextIndex);
+    setSlideDirection('left');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentImageIndex(nextIndex);
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+        setAnimatedIndex(null);
+      }, 50);
+    }, 350); // 애니메이션이 절반 진행된 시점에 현재 인덱스 변경
   };
 
   const goToPrevImage = () => {
-    if (mediaItems.length === 0) return;
-    setCurrentImageIndex(prevIndex => (prevIndex - 1 + mediaItems.length) % mediaItems.length);
+    if (mediaItems.length <= 1 || isAnimating) return;
+    const prevIndex = (currentImageIndex - 1 + mediaItems.length) % mediaItems.length;
+    setAnimatedIndex(prevIndex);
+    setSlideDirection('right');
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentImageIndex(prevIndex);
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+        setAnimatedIndex(null);
+      }, 50);
+    }, 350); // 애니메이션이 절반 진행된 시점에 현재 인덱스 변경
   };
 
   // 스와이프 핸들러
@@ -407,10 +432,10 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     const difference = touchStartX - touchEndX;
     const minSwipeDistance = 50; // 최소 스와이프 거리
 
-    if (difference > minSwipeDistance) {
+    if (difference > minSwipeDistance && !isAnimating) {
       // 왼쪽으로 스와이프 -> 다음 이미지
       goToNextImage();
-    } else if (difference < -minSwipeDistance) {
+    } else if (difference < -minSwipeDistance && !isAnimating) {
       // 오른쪽으로 스와이프 -> 이전 이미지
       goToPrevImage();
     }
@@ -482,36 +507,111 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
             <>
               <div
                 ref={imageContainerRef}
-                className='h-full w-full relative'
+                className='h-full w-full relative overflow-hidden'
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
-                {/* 미디어 타입에 따른 렌더링 */}
-                {mediaItems[currentImageIndex]?.contentType?.startsWith('video/') ? (
-                  <video
-                    src={mediaItems[currentImageIndex].fileUrl}
-                    className='w-full h-full object-contain'
-                    controls
-                    autoPlay
-                  />
-                ) : (
-                  <>
-                    <img
-                      src={mediaItems[currentImageIndex]?.fileUrl || diary.thumbnailUrl}
-                      alt={`다이어리 이미지 ${currentImageIndex + 1}`}
+                {/* 현재 이미지 */}
+                <div
+                  className={`w-full h-full absolute transition-all duration-300 ease-in-out ${
+                    slideDirection === 'left'
+                      ? '-translate-x-full opacity-0'
+                      : slideDirection === 'right'
+                        ? 'translate-x-full opacity-0'
+                        : 'translate-x-0 opacity-100'
+                  }`}
+                >
+                  {mediaItems[currentImageIndex]?.contentType?.startsWith('video/') ? (
+                    <video
+                      key={`video-${currentImageIndex}`}
+                      src={mediaItems[currentImageIndex].fileUrl}
                       className='w-full h-full object-contain'
-                      onLoad={handleImageLoad}
+                      controls
+                      autoPlay
                     />
-                    {/* 이미지 로딩 표시 */}
-                    {imageLoading && (
-                      <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-30'>
-                        <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white'></div>
-                      </div>
+                  ) : (
+                    <>
+                      <img
+                        key={`img-${currentImageIndex}`}
+                        src={mediaItems[currentImageIndex]?.fileUrl || diary.thumbnailUrl}
+                        alt={`다이어리 이미지 ${currentImageIndex + 1}`}
+                        className='w-full h-full object-contain'
+                        onLoad={handleImageLoad}
+                      />
+                      {/* 이미지 로딩 표시 */}
+                      {imageLoading && (
+                        <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-30'>
+                          <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white'></div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* 애니메이션 중인 다음/이전 이미지 */}
+                {isAnimating && animatedIndex !== null && (
+                  <div
+                    className={`w-full h-full absolute transition-all duration-300 ease-in-out ${
+                      slideDirection === 'left'
+                        ? 'translate-x-full opacity-0 animate-slide-from-right'
+                        : slideDirection === 'right'
+                          ? '-translate-x-full opacity-0 animate-slide-from-left'
+                          : ''
+                    }`}
+                  >
+                    {mediaItems[animatedIndex]?.contentType?.startsWith('video/') ? (
+                      <video
+                        key={`video-${animatedIndex}`}
+                        src={mediaItems[animatedIndex].fileUrl}
+                        className='w-full h-full object-contain'
+                        controls
+                        autoPlay={false}
+                      />
+                    ) : (
+                      <img
+                        key={`img-${animatedIndex}`}
+                        src={mediaItems[animatedIndex]?.fileUrl || diary.thumbnailUrl}
+                        alt={`다이어리 이미지 ${animatedIndex + 1}`}
+                        className='w-full h-full object-contain'
+                      />
                     )}
-                  </>
+                  </div>
                 )}
               </div>
+
+              {/* CSS 애니메이션 정의 */}
+              <style jsx>{`
+                @keyframes slide-from-right {
+                  0% {
+                    transform: translateX(100%);
+                    opacity: 0;
+                  }
+                  100% {
+                    transform: translateX(0);
+                    opacity: 1;
+                  }
+                }
+
+                @keyframes slide-from-left {
+                  0% {
+                    transform: translateX(-100%);
+                    opacity: 0;
+                  }
+                  100% {
+                    transform: translateX(0);
+                    opacity: 1;
+                  }
+                }
+
+                .animate-slide-from-right {
+                  animation: slide-from-right 0.35s ease-in-out forwards;
+                }
+
+                .animate-slide-from-left {
+                  animation: slide-from-left 0.35s ease-in-out forwards;
+                }
+              `}</style>
 
               {/* 이미지 슬라이더 컨트롤 */}
               {mediaItems.length > 1 && (
