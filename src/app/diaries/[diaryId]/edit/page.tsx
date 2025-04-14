@@ -36,7 +36,7 @@ const DiaryEditPage: FC = () => {
     eupmyeondong: '역삼동',
   });
   const [loading, setLoading] = useState<boolean>(false);
-  const [mediaList, setMediaList] = useState<Diary.DiaryMedia[]>([]);
+  const [mediaList, setMediaList] = useState<Diary.DiaryMedia.MutateDto[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -70,8 +70,21 @@ const DiaryEditPage: FC = () => {
           });
 
           // 미디어 리스트 설정
-          if (data.mediaList) {
-            setMediaList(data.mediaList);
+          if (data.mediaList && data.mediaList.length > 0) {
+            // DiaryMedia를 MutateDto로 변환
+            const convertedMediaList = data.mediaList.map(media => {
+              const mutateMedia: Diary.DiaryMedia.MutateDto = {
+                mediaId: media.mediaId,
+                originalName: `file-${media.mediaId}`, // 기존 파일은 실제 originalName이 없으므로 임의 생성
+                storedName: `stored-${media.mediaId}`, // 기존 파일은 실제 storedName이 없으므로 임의 생성
+                contentType: media.contentType,
+                size: 0, // 기존 파일은 실제 size 정보가 없으므로 0으로 설정
+                url: media.fileUrl, // fileUrl을 url로 매핑
+                orderIndex: media.orderIndex,
+              };
+              return mutateMedia;
+            });
+            setMediaList(convertedMediaList);
           }
 
           // 해시태그 설정 (API에서 제공하는 형식에 따라 조정 필요)
@@ -138,7 +151,7 @@ const DiaryEditPage: FC = () => {
     setIsUploading(true);
     setErrorMessage('');
     const files = Array.from(e.target.files);
-    const newMediaItems: Diary.DiaryMedia[] = [];
+    const newMediaItems: Diary.DiaryMedia.MutateDto[] = [];
 
     // 진행 상태 초기화
     const initialProgress: { [key: string]: number } = {};
@@ -157,6 +170,7 @@ const DiaryEditPage: FC = () => {
         const orderIndex = mediaList.length + i;
         const fileId = `${Date.now()}-${i}-${originalName}`;
 
+        // 새로 첨부하는 파일만 presignedUrl 발급 및 업로드
         // 1. 백엔드에서 presigned URL 요청
         const { presignedUrl, accessUrl, mediaId } = await MediaService.getPresignedUrl(
           originalName,
@@ -178,22 +192,25 @@ const DiaryEditPage: FC = () => {
           }
         );
 
-        console.log(accessUrl);
-        // 3. 미디어 아이템 생성
-        const mediaItem: Diary.DiaryMedia = {
+        // UUID와 구분자를 제외한 원본 파일명 추출
+        const storedName = v4() + '-' + originalName;
+
+        console.log('업로드 완료, 접근 URL:', accessUrl);
+        // 3. DiaryMedia.MutateDto 형태로 미디어 아이템 생성
+        const mediaItem: Diary.DiaryMedia.MutateDto = {
           mediaId,
-          originalName,
-          storedName: v4() + '-' + originalName,
-          contentType,
-          size,
-          url: accessUrl,
-          orderIndex,
+          originalName, // 원본 파일명
+          storedName, // UUID 추가된 저장 파일명
+          contentType, // 파일 타입 (MIME 타입)
+          size, // 파일 크기
+          url: accessUrl, // S3 접근 URL
+          orderIndex, // 정렬 순서
         };
 
         newMediaItems.push(mediaItem);
       }
 
-      // 모든 업로드가 성공하면 상태 업데이트
+      // 모든 업로드가 성공하면 상태 업데이트 (기존 mediaList에 추가)
       setMediaList(prev => [...prev, ...newMediaItems]);
     } catch (error) {
       console.error('파일 업로드 중 오류 발생:', error);
@@ -219,7 +236,7 @@ const DiaryEditPage: FC = () => {
     setLoading(true);
     setErrorMessage('');
 
-    // Diary.CreateDto 형식에 맞게 데이터 구성
+    // UpdateDto는 mediaList가 MutateDto[] 타입을 요구하므로 변환 불필요
     const formData: Diary.UpdateDto = {
       title: title,
       content: content,
@@ -233,7 +250,7 @@ const DiaryEditPage: FC = () => {
       },
       weatherInfo: weather,
       visibility: visibility,
-      mediaList: mediaList,
+      mediaList: mediaList, // MutateDto[] 타입 그대로 사용
       hashtagList: tags,
       thumbnailUrl: mediaList.length > 0 ? mediaList[0].url : undefined,
     };

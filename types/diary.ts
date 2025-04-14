@@ -47,12 +47,21 @@ export namespace Diary {
 
   export interface DiaryMedia {
     mediaId: number;
-    originalName: string;
-    storedName: string;
+    fileUrl: string;
     contentType: string;
-    size: number;
-    url: string;
     orderIndex: number;
+  }
+
+  export namespace DiaryMedia {
+    export class MutateDto {
+      mediaId!: number;
+      originalName!: string;
+      storedName!: string;
+      contentType!: string;
+      size!: number;
+      url!: string;
+      orderIndex!: number;
+    }
   }
 
   export interface Common {
@@ -110,7 +119,7 @@ export namespace Diary {
     location: Location;
     weatherInfo: WeatherType;
     visibility: Visibility;
-    mediaList: DiaryMedia[];
+    mediaList: DiaryMedia.MutateDto[];
     hashtagList: string[];
     thumbnailUrl?: string;
   }
