@@ -110,8 +110,16 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     if (diary) {
       fetchComments();
       setLikeCount(diary.likeCount || 0);
+      setIsLiked(diary.isLiked || false);
     }
   }, []);
+
+  // diary가 변경될 때마다 isLiked 업데이트
+  useEffect(() => {
+    if (diary) {
+      setIsLiked(diary.isLiked || false);
+    }
+  }, [diary]);
 
   // 스크롤 이벤트 핸들러
   const handleCommentsScroll = useCallback(() => {
