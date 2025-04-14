@@ -60,8 +60,8 @@ function UserSearchContent() {
   // 검색 폼 제출 핸들러
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
 
+    // 빈 검색어도 허용
     if (searchType === '작가') {
       router.push(`/users/search?q=${encodeURIComponent(searchQuery)}`);
     } else {
@@ -95,7 +95,8 @@ function UserSearchContent() {
   const fetchUsers = useCallback(
     async (reset = false) => {
       if (loading && !reset) return;
-      if (!searchQuery.trim() && !reset) return;
+      // 빈 검색어도 API 호출을 허용 (아래 조건 제거)
+      // if (!searchQuery.trim() && !reset) return;
 
       setLoading(true);
       try {
@@ -107,9 +108,11 @@ function UserSearchContent() {
           queryParams.cursor = cursorId;
         }
 
+        // 검색어가 있는 경우에만 nickname 파라미터 추가
         if (searchQuery.trim()) {
           queryParams.nickname = searchQuery;
         }
+        // 검색어가 없으면 nickname 파라미터를 전달하지 않음 (전체 목록 조회)
 
         // TypeScript 캐스팅으로 타입 에러 해결
         const response = await UserService.getUserList(queryParams as User.GetListQueryDto);
