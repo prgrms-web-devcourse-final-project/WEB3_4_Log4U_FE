@@ -23,7 +23,7 @@ export class UserService {
   static async getUser(userId: number): Promise<User.IDetail> {
     try {
       const { data } = await axiosInstance.request<User.IDetail>({
-        url: `/users/id/${userId}`,
+        url: `/users/${userId}`,
         method: 'GET',
       });
 
