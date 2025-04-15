@@ -333,6 +333,18 @@ export default function GoogleMapComponent({
                 }}
                 title={marker.title}
                 zIndex={style.zIndex}
+                onClick={() => {
+                  if (
+                    marker.id &&
+                    typeof marker.id === 'string' &&
+                    marker.id.startsWith('diary_')
+                  ) {
+                    const diaryId = marker.id.replace('diary_', '');
+                    if (!isNaN(Number(diaryId))) {
+                      window.location.href = `/diaries/${diaryId}`;
+                    }
+                  }
+                }}
               />
             );
           }
