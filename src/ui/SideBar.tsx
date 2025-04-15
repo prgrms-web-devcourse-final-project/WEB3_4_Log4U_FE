@@ -21,11 +21,17 @@ export default function SideBar({ children }: SideBarProps): React.JSX.Element {
     </aside>
   );
 }
-
 export function LeftSideBar() {
+  // 현재 페이지 새로고침하는 함수
+  const refreshPage = () => {
+    window.location.reload();
+  };
+
   return (
     <SideBar>
-      <h1 className='grow-1 text-4xl'>log4U</h1>
+      <h1 className='grow-1 text-4xl cursor-pointer' onClick={refreshPage}>
+        log4U
+      </h1>
       <div className='grow-2'>
         <div className='flex items-center mb-2'>
           <Image src='/home.png' alt='home image' width={50} height={50} />

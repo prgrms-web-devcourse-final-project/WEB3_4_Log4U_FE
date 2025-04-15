@@ -177,7 +177,7 @@ export default function MyPage() {
     <div className='flex flex-col h-full overflow-y-auto border-x border-gray-200'>
       {/* 프로필 헤더 */}
       <div className='relative'>
-        <div className='h-48 bg-gradient-to-r from-blue-400 to-indigo-500'></div>
+        <div className='h-48 bg-[#e5e0d6] relative overflow-hidden shadow-inner'></div>
         <div className='absolute bottom-0 left-0 w-full transform translate-y-1/2 px-8 flex items-end'>
           <div className='w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg'>
             <img
@@ -190,7 +190,7 @@ export default function MyPage() {
             <h1 className='text-3xl font-bold'>{user?.name || 'User'}</h1>
             <p className='text-gray-700'>@{user?.nickname || 'username'}</p>
           </div>
-          <button className='ml-auto mb-4 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition'>
+          <button className='ml-auto mb-4 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-opacity-90 transition'>
             프로필 편집
           </button>
         </div>

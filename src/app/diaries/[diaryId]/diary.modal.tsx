@@ -313,17 +313,27 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   }, [showReportModal]);
 
   // 댓글 제출 핸들러
+  // 댓글 제출 핸들러
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() || !user) return;
 
     setIsActionLoading(true);
 
     try {
       const newComment = await CommentService.createComment(diaryId, comment);
 
+      // 새 댓글에 사용자 정보 추가
+      const enhancedComment: Comment.Summary = {
+        ...newComment,
+        userName: user.nickname || '사용자',
+        userProfileImage: user.profileImage || '',
+        userId: user.userId,
+        createdAt: new Date().toISOString(), // 현재 시간 추가
+      };
+
       // 새 댓글을 목록 맨 위에 추가
-      setComments(prev => [newComment, ...prev]);
+      setComments(prev => [enhancedComment, ...prev]);
       setComment('');
     } catch (err) {
       console.error('댓글 작성 중 오류 발생:', err);
