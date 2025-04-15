@@ -374,12 +374,12 @@ export default function UserProfilePage() {
         .filter(
           diary =>
             // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
-            diary.latitude && diary.longitude
+            diary.lat && diary.lon
         )
         .map(diary => {
           // 최대한 안전하게 좌표 정보 추출
-          const lat = diary.latitude;
-          const lng = diary.longitude;
+          const lat = diary.lat;
+          const lng = diary.lon;
 
           return {
             id: diary.diaryId,

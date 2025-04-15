@@ -17,9 +17,9 @@ export namespace Map {
 
       title: string;
 
-      latitude: number;
+      lat: number;
 
-      longitude: number;
+      lon: number;
 
       thumbnailUrl: string;
 

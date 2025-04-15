@@ -110,9 +110,18 @@ function SearchContent() {
     [query, sort, cursorId, loading]
   );
 
-  // 맵 데이터 로드 함수 - 디바운싱 적용
+  // 맵 데이터 로드 함수에 더 많은 로깅 추가
   const loadMapData = useCallback(async () => {
-    if (!mapBounds || mapLoading) return;
+    if (!mapBounds || mapLoading) {
+      console.log('맵 로드 건너뜀: bounds 없음 또는 로딩 중', { mapBounds, mapLoading });
+      return;
+    }
+
+    console.log('맵 데이터 로드 시작', {
+      bounds: mapBounds,
+      zoom: zoomLevel,
+      현재마커수: mapMarkers.length,
+    });
 
     setMapLoading(true);
     try {
@@ -127,7 +136,10 @@ function SearchContent() {
       if (zoomLevel <= 13) {
         // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드 (일반 지도)
         const clusters = await MapService.getMapCluster(query);
-        console.log(`클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`);
+        console.log(
+          `클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`,
+          clusters
+        );
 
         // diaryCount가 0인 클러스터는 제외
         const markers = clusters
@@ -140,32 +152,59 @@ function SearchContent() {
             count: cluster.diaryCount,
             title: `${cluster.areaName} (${cluster.diaryCount}개)`,
           }));
-        console.log(`클러스터 마커 생성: ${markers.length}개`);
 
+        console.log(`클러스터 마커 생성: ${markers.length}개`, markers);
         setMapMarkers(markers);
+        console.log('클러스터 마커 설정 후', mapMarkers); // 주의: 상태 업데이트는 비동기적이므로 여기서는 이전 값이 보일 수 있음
       } else {
         // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드 (일반 지도)
         const diaries = await MapService.getMapDiaries(query);
-        console.log(`다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`);
+        console.log(
+          `다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`,
+          diaries
+        );
+        console.log('diaries');
+        console.log(diaries, 'diaries!!!!!!');
+        console.log('diaries.length', diaries.length);
 
-        const markers = diaries.map(diary => ({
+        // 유효한 좌표가 있는 다이어리만 필터링
+        const validDiaries = diaries.filter(
+          diary => diary.lat && diary.lon && !isNaN(diary.lat) && !isNaN(diary.lon)
+        );
+
+        if (validDiaries.length !== diaries.length) {
+          console.warn(
+            `${diaries.length - validDiaries.length}개의 다이어리에 유효하지 않은 좌표가 있습니다.`
+          );
+        }
+
+        const markers = validDiaries.map(diary => ({
           id: diary.diaryId,
-          lat: diary.latitude,
-          lng: diary.longitude,
+          lat: diary.lat,
+          lng: diary.lon,
           profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
           title: diary.title,
         }));
-        console.log(`다이어리 마커 생성: ${markers.length}개`);
 
-        setMapMarkers(markers);
+        console.log(`다이어리 마커 생성: ${markers.length}개`, markers);
+
+        if (markers.length > 0) {
+          setMapMarkers(markers);
+        } else {
+          console.warn('생성된 마커가 없습니다. API 응답 확인 필요');
+        }
       }
     } catch (error) {
       console.error('맵 데이터 로드 중 오류 발생:', error);
       setMapMarkers([]); // 오류 시 마커 초기화
     } finally {
       setMapLoading(false);
+      // 상태 업데이트 확인을 위한 setTimeout (디버깅용)
+      setTimeout(() => {
+        console.log('맵 로드 완료 후 마커 상태:', mapMarkers.length);
+      }, 0);
     }
-  }, [mapBounds, zoomLevel, mapLoading]);
+  }, [mapBounds, zoomLevel, mapLoading, mapMarkers.length]);
 
   // 줌 레벨 변경 처리 함수
   const handleZoomChanged = useCallback(
