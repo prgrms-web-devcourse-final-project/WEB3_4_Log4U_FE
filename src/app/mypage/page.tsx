@@ -177,7 +177,7 @@ export default function MyPage() {
     <div className='flex flex-col h-full overflow-y-auto border-x border-gray-200'>
       {/* 프로필 헤더 */}
       <div className='relative'>
-        <div className='h-48 bg-gradient-to-r from-blue-400 to-indigo-500'></div>
+        <div className='h-48 bg-[#e5e0d6] relative overflow-hidden shadow-inner'></div>
         <div className='absolute bottom-0 left-0 w-full transform translate-y-1/2 px-8 flex items-end'>
           <div className='w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg'>
             <img
@@ -190,9 +190,54 @@ export default function MyPage() {
             <h1 className='text-3xl font-bold'>{user?.name || 'User'}</h1>
             <p className='text-gray-700'>@{user?.nickname || 'username'}</p>
           </div>
-          <button className='ml-auto mb-4 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition'>
-            프로필 편집
-          </button>
+          <div className='ml-auto mb-4 flex space-x-2'>
+            <Link href='/users/profile/edit'>
+              <button className='px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg flex items-center hover:bg-opacity-90 shadow-md transition-all duration-200'>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  className='h-5 w-5 mr-2'
+                  fill='none'
+                  viewBox='0 0 24 24'
+                  stroke='currentColor'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={1.5}
+                    d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                  />
+                </svg>
+                프로필 편집
+              </button>
+            </Link>
+            <button
+              className='p-2 bg-white text-[var(--color-accent)] border border-[var(--color-accent)] rounded-lg flex items-center hover:bg-gray-50 shadow-sm transition-all duration-200'
+              onClick={async () => {
+                try {
+                  await UserService.logout();
+                  // 로그아웃 후 홈페이지로 리디렉션하고 모든 상태 초기화
+                  window.location.href = '/';
+                } catch (error) {
+                  console.error('로그아웃 실패:', error);
+                }
+              }}
+            >
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='h-5 w-5'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={1.5}
+                  d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 

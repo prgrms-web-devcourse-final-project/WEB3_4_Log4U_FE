@@ -687,7 +687,7 @@ const DiaryCreatePage: FC = () => {
                         </span>
                       </div>
                     )}
-                    <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200'></div>
+                    <div className='absolute inset-0 bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200'></div>
                     <button
                       type='button'
                       onClick={() => setMediaList(mediaList.filter((_, i) => i !== index))}

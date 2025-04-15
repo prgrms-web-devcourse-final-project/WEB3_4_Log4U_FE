@@ -315,15 +315,24 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
   // 댓글 제출 핸들러
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() || !user) return;
 
     setIsActionLoading(true);
 
     try {
       const newComment = await CommentService.createComment(diaryId, comment);
 
+      // 새 댓글에 사용자 정보 추가
+      const enhancedComment: Comment.Summary = {
+        ...newComment,
+        userName: user.nickname || '사용자',
+        userProfileImage: user.profileImage || '',
+        userId: user.userId,
+        createdAt: new Date().toISOString(), // 현재 시간 추가
+      };
+
       // 새 댓글을 목록 맨 위에 추가
-      setComments(prev => [newComment, ...prev]);
+      setComments(prev => [enhancedComment, ...prev]);
       setComment('');
     } catch (err) {
       console.error('댓글 작성 중 오류 발생:', err);
@@ -425,12 +434,23 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     setAnimatedIndex(nextIndex);
     setSlideDirection('left');
     setIsAnimating(true);
+
+    // 이미지 타입인 경우에만 로딩 상태 활성화
+    if (!mediaItems[nextIndex]?.contentType?.startsWith('video/')) {
+      setImageLoading(true);
+    }
+
     setTimeout(() => {
       setCurrentImageIndex(nextIndex);
       setTimeout(() => {
         setSlideDirection(null);
         setIsAnimating(false);
         setAnimatedIndex(null);
+
+        // 애니메이션 완료 후 추가 시간이 지났는데도 로딩 중이면 강제로 로딩 상태 해제
+        setTimeout(() => {
+          setImageLoading(false);
+        }, 1000);
       }, 50);
     }, 350); // 애니메이션이 절반 진행된 시점에 현재 인덱스 변경
   };
@@ -441,12 +461,23 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
     setAnimatedIndex(prevIndex);
     setSlideDirection('right');
     setIsAnimating(true);
+
+    // 이미지 타입인 경우에만 로딩 상태 활성화
+    if (!mediaItems[prevIndex]?.contentType?.startsWith('video/')) {
+      setImageLoading(true);
+    }
+
     setTimeout(() => {
       setCurrentImageIndex(prevIndex);
       setTimeout(() => {
         setSlideDirection(null);
         setIsAnimating(false);
         setAnimatedIndex(null);
+
+        // 애니메이션 완료 후 추가 시간이 지났는데도 로딩 중이면 강제로 로딩 상태 해제
+        setTimeout(() => {
+          setImageLoading(false);
+        }, 1000);
       }, 50);
     }, 350); // 애니메이션이 절반 진행된 시점에 현재 인덱스 변경
   };
@@ -504,13 +535,29 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
   // 이미지가 로드될 때마다 로딩 상태 초기화
   const handleImageLoad = () => {
+    console.log('이미지 로드 완료', currentImageIndex);
     setImageLoading(false);
   };
 
   // 이미지 인덱스가 변경될 때마다 로딩 상태 재설정
   useEffect(() => {
-    setImageLoading(true);
-  }, [currentImageIndex]);
+    if (mediaItems[currentImageIndex]?.contentType?.startsWith('video/')) {
+      // 비디오면 로딩 표시를 하지 않음
+      setImageLoading(false);
+    } else {
+      // 이미지 캐싱 여부 확인
+      const img = new Image();
+      img.onload = () => setImageLoading(false);
+      img.src = mediaItems[currentImageIndex]?.fileUrl || diary?.thumbnailUrl || '';
+
+      // 일정 시간 후에도 로딩이 완료되지 않으면 강제로 로딩 완료 처리
+      const timer = setTimeout(() => {
+        setImageLoading(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentImageIndex, mediaItems, diary?.thumbnailUrl]);
 
   if (!diary) {
     return null;
@@ -562,7 +609,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                 >
                   {mediaItems[currentImageIndex]?.contentType?.startsWith('video/') ? (
                     <video
-                      key={`video-${currentImageIndex}`}
+                      key={`video-${currentImageIndex}-${mediaItems[currentImageIndex]?.mediaId}`}
                       src={mediaItems[currentImageIndex].fileUrl}
                       className='w-full h-full object-contain'
                       controls
@@ -571,11 +618,22 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                   ) : (
                     <>
                       <img
-                        key={`img-${currentImageIndex}`}
+                        key={`img-${currentImageIndex}-${mediaItems[currentImageIndex]?.mediaId}`}
                         src={mediaItems[currentImageIndex]?.fileUrl || diary.thumbnailUrl}
                         alt={`다이어리 이미지 ${currentImageIndex + 1}`}
                         className='w-full h-full object-contain'
                         onLoad={handleImageLoad}
+                        onError={e => {
+                          console.error(
+                            '이미지 로드 실패:',
+                            mediaItems[currentImageIndex]?.fileUrl
+                          );
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null; // 무한 루프 방지
+                          target.src = '/image-placeholder.png'; // 기본 이미지 경로
+                          target.classList.add('bg-gray-200');
+                          setImageLoading(false);
+                        }}
                       />
                       {/* 이미지 로딩 표시 */}
                       {imageLoading && (
@@ -600,7 +658,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                   >
                     {mediaItems[animatedIndex]?.contentType?.startsWith('video/') ? (
                       <video
-                        key={`video-${animatedIndex}`}
+                        key={`video-${animatedIndex}-${mediaItems[animatedIndex]?.mediaId}`}
                         src={mediaItems[animatedIndex].fileUrl}
                         className='w-full h-full object-contain'
                         controls
@@ -608,10 +666,16 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                       />
                     ) : (
                       <img
-                        key={`img-${animatedIndex}`}
+                        key={`img-${animatedIndex}-${mediaItems[animatedIndex]?.mediaId}`}
                         src={mediaItems[animatedIndex]?.fileUrl || diary.thumbnailUrl}
                         alt={`다이어리 이미지 ${animatedIndex + 1}`}
                         className='w-full h-full object-contain'
+                        onError={e => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/image-placeholder.png';
+                          target.classList.add('bg-gray-200');
+                        }}
                       />
                     )}
                   </div>
@@ -659,6 +723,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                     onClick={goToPrevImage}
                     className='absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70 transition'
                     aria-label='이전 이미지'
+                    disabled={isAnimating}
                   >
                     <svg
                       xmlns='http://www.w3.org/2000/svg'
@@ -681,6 +746,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                     onClick={goToNextImage}
                     className='absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70 transition'
                     aria-label='다음 이미지'
+                    disabled={isAnimating}
                   >
                     <svg
                       xmlns='http://www.w3.org/2000/svg'
@@ -708,15 +774,49 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                     <div className='flex space-x-2 max-w-full'>
                       {mediaItems.map((media, index) => (
                         <div
-                          key={media.mediaId}
-                          onClick={() => setCurrentImageIndex(index)}
-                          className={`h-16 w-16 flex-shrink-0 cursor-pointer border-2 transition-all ${index === currentImageIndex ? 'border-white' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                          key={`thumb-${index}-${media.mediaId}`}
+                          onClick={() => {
+                            if (!isAnimating) {
+                              setCurrentImageIndex(index);
+                            }
+                          }}
+                          className={`h-16 w-16 flex-shrink-0 cursor-pointer border-2 transition-all ${
+                            index === currentImageIndex
+                              ? 'border-white'
+                              : 'border-transparent opacity-70 hover:opacity-100'
+                          }`}
                         >
-                          <img
-                            src={media.fileUrl}
-                            alt={`썸네일 ${index + 1}`}
-                            className='h-full w-full object-cover'
-                          />
+                          {media.contentType?.startsWith('video/') ? (
+                            <div className='h-full w-full bg-gray-800 flex items-center justify-center'>
+                              <svg
+                                xmlns='http://www.w3.org/2000/svg'
+                                className='h-8 w-8 text-white'
+                                viewBox='0 0 20 20'
+                                fill='currentColor'
+                              >
+                                <path
+                                  fillRule='evenodd'
+                                  d='M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z'
+                                  clipRule='evenodd'
+                                />
+                              </svg>
+                            </div>
+                          ) : (
+                            <div className='relative h-full w-full bg-gray-200'>
+                              <img
+                                src={media.fileUrl}
+                                alt={`썸네일 ${index + 1}`}
+                                className='h-full w-full object-cover'
+                                onError={e => {
+                                  // 이미지 로드 실패 시 기본 이미지로 대체
+                                  const target = e.target as HTMLImageElement;
+                                  target.onerror = null; // 무한 루프 방지
+                                  target.src = '/image-placeholder.png'; // 기본 이미지 경로 (public 폴더에 추가 필요)
+                                  target.classList.add('bg-gray-300');
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1009,7 +1109,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
               <button
                 type='submit'
                 className='px-2 py-1 bg-gray-800 text-white text-sm rounded disabled:opacity-50'
-                disabled={!comment.trim() || isActionLoading}
+                disabled={!comment.trim() || isActionLoading || !user}
               >
                 게시
               </button>
