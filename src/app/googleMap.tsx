@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api';
 
 interface MapMarker {
   id: string | number;
@@ -17,6 +17,8 @@ interface GoogleMapComponentProps {
   onZoomChanged?: (newZoom: number) => void;
   onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number }) => void;
   initialZoom?: number;
+  pathColor?: string;
+  height?: string;
 }
 
 export default function GoogleMapComponent({
@@ -24,6 +26,8 @@ export default function GoogleMapComponent({
   onZoomChanged,
   onBoundsChanged,
   initialZoom = 11,
+  pathColor = '#FF5353',
+  height = '100vh',
 }: GoogleMapComponentProps) {
   // 맵 레퍼런스
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -32,6 +36,10 @@ export default function GoogleMapComponent({
     lat: 37.5665, // 서울 기본값
     lng: 126.978,
   });
+  // 사용자 위치 상태 추가
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  // 경로 표시용 정렬된 마커 배열
+  const [sortedMarkers, setSortedMarkers] = useState<(MapMarker & { distance?: number })[]>([]);
 
   // 구글 맵 API 로드
   const { isLoaded } = useJsApiLoader({
@@ -42,8 +50,68 @@ export default function GoogleMapComponent({
   // 지도 컨테이너 스타일
   const mapContainerStyle = {
     width: '100%',
-    height: '100%',
+    height: height,
   };
+
+  // 컴포넌트 마운트 시 사용자 위치 가져오기
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          console.log('사용자 현재 위치:', latitude, longitude);
+        },
+        error => {
+          console.error('위치 정보를 가져오는데 실패했습니다:', error);
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      console.log('이 브라우저에서는 위치 정보를 지원하지 않습니다.');
+    }
+  }, []);
+
+  // 마커들을 현재 위치에서 가까운 순서대로 정렬
+  useEffect(() => {
+    if (!userLocation || !markers || markers.length === 0) {
+      setSortedMarkers([]);
+      return;
+    }
+
+    // 다이어리 마커만 필터링 (클러스터가 아닌 마커)
+    const diaryMarkers = markers.filter(marker => !marker.count);
+    if (diaryMarkers.length === 0) return;
+
+    // 거리 계산 함수 (하버사인 공식)
+    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+      const R = 6371; // 지구 반지름 (km)
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLng = (lng2 - lng1) * (Math.PI / 180);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) *
+          Math.cos(lat2 * (Math.PI / 180)) *
+          Math.sin(dLng / 2) *
+          Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+      return distance;
+    };
+
+    // 현재 위치에서 각 마커까지의 거리 계산
+    const markersWithDistance = diaryMarkers.map(marker => ({
+      ...marker,
+      distance: calculateDistance(userLocation.lat, userLocation.lng, marker.lat, marker.lng),
+    }));
+
+    // 거리순으로 정렬
+    const sorted = [...markersWithDistance].sort((a, b) => a.distance - b.distance);
+    console.log('가까운 순서로 정렬된 마커:', sorted);
+
+    // 경로를 그릴 마커 설정 (최대 10개까지만)
+    setSortedMarkers(sorted.slice(0, 10));
+  }, [markers, userLocation]);
 
   // 맵 로드 완료 핸들러
   const handleMapLoad = useCallback(
@@ -102,6 +170,15 @@ export default function GoogleMapComponent({
       }
     }
   }, [onZoomChanged, onBoundsChanged, initialZoom]);
+
+  // 경로 포인트 생성 (사용자 위치 + 정렬된 마커들)
+  const pathPoints =
+    userLocation && sortedMarkers.length > 0
+      ? [
+          userLocation, // 시작점 (사용자 위치)
+          ...sortedMarkers.map(marker => ({ lat: marker.lat, lng: marker.lng })), // 가까운 마커들
+        ]
+      : [];
 
   // 마커 렌더링
   const renderMarkers = () => {
@@ -200,6 +277,10 @@ export default function GoogleMapComponent({
 
           // 일반 다이어리 마커 - 이미지 썸네일 설정
           console.log(`다이어리 마커 생성: ID=${marker.id}, 썸네일=${marker.profileUrl || '없음'}`);
+
+          // 정렬된 마커 경로에 포함된 마커인지 확인
+          const isInPath = sortedMarkers.some(m => m.id === marker.id);
+
           return (
             <Marker
               key={marker.id}
@@ -210,6 +291,8 @@ export default function GoogleMapComponent({
                 anchor: new window.google.maps.Point(25, 25),
               }}
               title={marker.title}
+              // 경로에 포함된 마커는 더 높은 z-index로 설정하여 강조
+              zIndex={isInPath ? 100 : 10}
               onClick={() => {
                 if (marker.id && typeof marker.id === 'string' && marker.id.startsWith('diary_')) {
                   const diaryId = marker.id.replace('diary_', '');
@@ -257,7 +340,44 @@ export default function GoogleMapComponent({
           ],
         }}
       >
+        {/* 마커들 렌더링 */}
         {renderMarkers()}
+
+        {/* 사용자 위치 마커 (있을 경우) */}
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={{
+              url: '/user-location.png', // 사용자 위치 아이콘
+              scaledSize: new window.google.maps.Size(40, 40),
+              anchor: new window.google.maps.Point(20, 20),
+            }}
+            title='내 위치'
+            zIndex={1000} // 가장 위에 표시
+          />
+        )}
+
+        {/* 가까운 마커들을 연결하는 경로 (항상 표시) */}
+        {pathPoints.length > 1 && (
+          <Polyline
+            path={pathPoints}
+            options={{
+              strokeColor: pathColor,
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              icons: [
+                {
+                  icon: {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 3,
+                  },
+                  offset: '0',
+                  repeat: '100px',
+                },
+              ],
+            }}
+          />
+        )}
       </GoogleMap>
     </div>
   );
