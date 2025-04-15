@@ -310,20 +310,47 @@ export default function HomePage() {
   // 맵 데이터 로드를 위한 디바운싱 타이머 참조
   const mapDataTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 이전 맵 상태를 저장하기 위한 참조
+  const prevMapStateRef = useRef<{
+    bounds: { north: number; south: number; east: number; west: number } | null;
+    zoom: number;
+  }>({ bounds: null, zoom: zoomLevel });
+
   // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
   useEffect(() => {
+    // mapBounds가 null이면 아직 맵이 준비되지 않은 상태
+    if (!mapBounds) return;
+
+    // 상태 변화가 없으면 API 호출하지 않음
+    const prevState = prevMapStateRef.current;
+    const boundsChanged =
+      !prevState.bounds ||
+      Math.abs(prevState.bounds.north - mapBounds.north) > 0.0001 ||
+      Math.abs(prevState.bounds.south - mapBounds.south) > 0.0001 ||
+      Math.abs(prevState.bounds.east - mapBounds.east) > 0.0001 ||
+      Math.abs(prevState.bounds.west - mapBounds.west) > 0.0001;
+
+    const zoomChanged = prevState.zoom !== zoomLevel;
+
+    // 맵 상태에 변화가 없으면 호출 건너뛰기
+    if (!boundsChanged && !zoomChanged) return;
+
+    // 현재 상태 저장
+    prevMapStateRef.current = {
+      bounds: { ...mapBounds },
+      zoom: zoomLevel,
+    };
+
     // 이전 타이머가 있으면 취소
     if (mapDataTimerRef.current) {
       clearTimeout(mapDataTimerRef.current);
     }
 
-    // mapBounds가 null이면 아직 맵이 준비되지 않은 상태
-    if (!mapBounds) return;
-
-    // 500ms 후에 데이터 로드 (디바운싱)
+    // 디바운싱 적용 - 800ms 동안 추가 변경이 없을 때만 API 호출
     mapDataTimerRef.current = setTimeout(() => {
+      console.log('맵 데이터 로드: 디바운싱 후 API 호출');
       loadMapData();
-    }, 500);
+    }, 800);
 
     // 컴포넌트 언마운트 시 타이머 정리
     return () => {
@@ -331,29 +358,43 @@ export default function HomePage() {
         clearTimeout(mapDataTimerRef.current);
       }
     };
-  }, [mapBounds, zoomLevel]);
+  }, [mapBounds, zoomLevel, loadMapData]);
 
   // 맵에 표시할 마커 데이터 생성
   const mapMarkers = useMemo(() => {
+    // 유효한 위도/경도 값인지 확인하는 헬퍼 함수
+    const isValidCoordinate = (value: unknown): boolean => {
+      return typeof value === 'number' && !isNaN(value) && isFinite(value);
+    };
+
     if (zoomLevel <= 13) {
       // 클러스터 데이터 마커
-      return clusterData.map(cluster => ({
-        id: cluster.areaId,
-        lat: cluster.lat,
-        lng: cluster.lon,
-        profileUrl: '/hot-logger.png', // 클러스터 아이콘
-        count: cluster.diaryCount,
-        title: `${cluster.areaName} (${cluster.diaryCount}개)`,
-      }));
+      return clusterData
+        .filter(cluster => isValidCoordinate(cluster.lat) && isValidCoordinate(cluster.lon))
+        .map(cluster => ({
+          id: `cluster_${cluster.areaId}`, // 고유한 ID 생성: 'cluster_' 접두사 추가
+          lat: Number(cluster.lat), // 명시적으로 숫자로 변환
+          lng: Number(cluster.lon), // 명시적으로 숫자로 변환
+          profileUrl: '/hot-logger.png', // 클러스터 아이콘
+          count: cluster.diaryCount,
+          title: `${cluster.areaName || '지역'} (${cluster.diaryCount}개)`,
+        }));
     } else {
       // 다이어리 마커
-      return mapDiaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
+      return mapDiaries
+        .filter(diary => isValidCoordinate(diary.latitude) && isValidCoordinate(diary.longitude))
+        .map(diary => {
+          console.log(diary);
+          console.log(diary.latitude);
+          console.log(diary.longitude);
+          return {
+            id: `diary_${diary.diaryId}`, // 고유한 ID 생성: 'diary_' 접두사 추가
+            lat: Number(diary.latitude), // 명시적으로 숫자로 변환
+            lng: Number(diary.longitude), // 명시적으로 숫자로 변환
+            profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+            title: diary.title || '제목 없음',
+          };
+        });
     }
   }, [zoomLevel, clusterData, mapDiaries]);
 
@@ -404,7 +445,7 @@ export default function HomePage() {
 
         {/* 구글 맵 */}
         <GoogleMapComponent
-          markers={mapMarkers}
+          markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
           onZoomChanged={handleZoomChanged}
           onBoundsChanged={handleBoundsChanged}
           initialZoom={zoomLevel}

@@ -504,7 +504,7 @@ export default function UserProfilePage() {
 
         {/* 구글 맵 */}
         <GoogleMapComponent
-          markers={mapMarkers}
+          markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
           onZoomChanged={handleZoomChanged}
           onBoundsChanged={handleBoundsChanged}
           initialZoom={zoomLevel}
