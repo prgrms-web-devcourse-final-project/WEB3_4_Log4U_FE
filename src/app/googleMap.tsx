@@ -318,7 +318,7 @@ export default function GoogleMapComponent({
     );
 
   return (
-    <div className={'h-[400px]'}>
+    <div style={{ height: '100%' }}>
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
