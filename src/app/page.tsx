@@ -477,7 +477,7 @@ export default function HomePage() {
             <div>
               <h1 className='text-xl font-bold mb-2'>{user?.name || 'winter'}</h1>
               <div className='flex space-x-4 text-sm'>
-                <div>게시물 {user?.diaryCount || 0}</div>
+                <div>게시물 {user?.diaryCount ?? diaries.length}</div>
                 <div
                   className='cursor-pointer hover:text-blue-500 transition'
                   onClick={openFollowersModal}

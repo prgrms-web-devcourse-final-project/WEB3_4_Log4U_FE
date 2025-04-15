@@ -493,7 +493,8 @@ export default function UserProfilePage() {
               </div>
               <div className='flex space-x-4 text-sm'>
                 <div>
-                  <span className='font-semibold'>{profile.diaryCount}</span> 게시물
+                  <span className='font-semibold'>{profile.diaryCount ?? diaries.length}</span>{' '}
+                  게시물
                 </div>
                 <div
                   className='cursor-pointer hover:text-blue-500 transition'
