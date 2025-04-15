@@ -289,19 +289,55 @@ export default function HomePage() {
         zoom: zoomLevel,
       };
 
+      console.log('맵 API 요청 파라미터:', query);
+
       if (zoomLevel <= 13) {
         // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드
         const clusters = await MapService.getMyMapCluster(query);
+        console.log('클러스터 데이터 응답:', clusters);
         setClusterData(clusters);
         setMapDiaries([]);
       } else {
         // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드
+        console.log('다이어리 마커 API 요청 시작');
         const diaries = await MapService.getMyMapDiaries(query);
-        setMapDiaries(diaries);
+        console.log('다이어리 마커 API 응답:', diaries);
+
+        // 데이터 유효성 검사
+        if (!Array.isArray(diaries)) {
+          console.error('API 응답이 배열이 아닙니다:', diaries);
+          setMapDiaries([]);
+        } else if (diaries.length === 0) {
+          console.log('표시할 다이어리가 없습니다.');
+          setMapDiaries([]);
+        } else {
+          // 좌표 데이터 유효성 검사
+          const validDiaries = diaries.filter(diary => {
+            const hasValidCoords =
+              diary &&
+              typeof diary.latitude === 'number' &&
+              typeof diary.longitude === 'number' &&
+              !isNaN(diary.latitude) &&
+              !isNaN(diary.longitude);
+
+            if (!hasValidCoords) {
+              console.warn('유효하지 않은 다이어리 좌표:', diary);
+            }
+
+            return hasValidCoords;
+          });
+
+          console.log(`유효한 다이어리 마커: ${validDiaries.length}/${diaries.length}`);
+          setMapDiaries(validDiaries);
+        }
+
         setClusterData([]);
       }
     } catch (error) {
       console.error('맵 데이터 로드 중 오류 발생:', error);
+      // 오류 발생 시 상태 초기화
+      setMapDiaries([]);
+      setClusterData([]);
     } finally {
       setMapLoading(false);
     }
@@ -380,23 +416,46 @@ export default function HomePage() {
           title: `${cluster.areaName || '지역'} (${cluster.diaryCount}개)`,
         }));
     } else {
+      // 다이어리 마커 생성 전 로깅
+      console.log('다이어리 마커 생성 시작, 총 개수:', mapDiaries.length);
+
       // 다이어리 마커
-      return mapDiaries
-        .filter(diary => isValidCoordinate(diary.latitude) && isValidCoordinate(diary.longitude))
+      const diaryMarkers = mapDiaries
+        .filter(diary => {
+          // 위도/경도 데이터 검증 및 로깅
+          const isValid = isValidCoordinate(diary.latitude) && isValidCoordinate(diary.longitude);
+          if (!isValid) {
+            console.warn('유효하지 않은 좌표:', diary.diaryId, diary.latitude, diary.longitude);
+          }
+          return isValid;
+        })
         .map(diary => {
-          console.log(diary);
-          console.log(diary.latitude);
-          console.log(diary.longitude);
-          return {
-            id: `diary_${diary.diaryId}`, // 고유한 ID 생성: 'diary_' 접두사 추가
+          // 각 다이어리의 데이터 확인
+          const marker = {
+            id: `diary_${diary.diaryId}`, // 고유한 ID 생성
             lat: Number(diary.latitude), // 명시적으로 숫자로 변환
             lng: Number(diary.longitude), // 명시적으로 숫자로 변환
             profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
             title: diary.title || '제목 없음',
           };
+
+          // 개별 마커 데이터 로깅
+          console.log(
+            `마커 생성: ID=${marker.id}, lat=${marker.lat}, lng=${marker.lng}, 썸네일=${marker.profileUrl}`
+          );
+
+          return marker;
         });
+
+      console.log('유효한 다이어리 마커 생성 완료, 총 개수:', diaryMarkers.length);
+      return diaryMarkers;
     }
   }, [zoomLevel, clusterData, mapDiaries]);
+
+  // GoogleMapComponent에 전달 전 최종 마커 확인
+  useEffect(() => {
+    console.log('최종 마커 배열:', mapMarkers);
+  }, [mapMarkers]);
 
   return (
     <div className='flex p-4'>
@@ -443,9 +502,9 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* 구글 맵 */}
+        {/* 구글 맵 - 마커 필터링 로직 개선 */}
         <GoogleMapComponent
-          markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
+          markers={mapMarkers}
           onZoomChanged={handleZoomChanged}
           onBoundsChanged={handleBoundsChanged}
           initialZoom={zoomLevel}
