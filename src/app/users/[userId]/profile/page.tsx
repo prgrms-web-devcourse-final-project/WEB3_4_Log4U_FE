@@ -223,7 +223,7 @@ export default function UserProfilePage() {
       // 팔로우 여부 확인 (자신이 아닐 경우)
       if (meData.userId !== userData.userId) {
         try {
-          const followingsData = await FollowService.getFollowings();
+          const followingsData = await FollowService.getMyFollowings();
           // list 속성을 통해 followings 배열에 접근
           const isFollowingUser = followingsData.list.some(
             (following: User.IFollowSummary) => following.userId === userData.userId
