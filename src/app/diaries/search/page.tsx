@@ -333,7 +333,7 @@ function SearchContent() {
     setCursorId(undefined);
     setHasMore(true);
     fetchSearchResults(true);
-  }, [query, activeTab, fetchSearchResults]);
+  }, [query, activeTab]);
 
   // 지도 중심 좌표 추가
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
