@@ -37,8 +37,7 @@ function SearchContent() {
     east: number;
     west: number;
   } | null>(null);
-  const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
-  const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
+
   const [mapLoading, setMapLoading] = useState(false);
   // 마커 데이터를 state로 관리
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
@@ -128,6 +127,7 @@ function SearchContent() {
       if (zoomLevel <= 13) {
         // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드 (일반 지도)
         const clusters = await MapService.getMapCluster(query);
+        console.log(`클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`);
 
         const markers = clusters.map(cluster => ({
           id: cluster.areaId,
@@ -137,12 +137,14 @@ function SearchContent() {
           count: cluster.diaryCount,
           title: `${cluster.areaName} (${cluster.diaryCount}개)`,
         }));
+        console.log(`클러스터 마커 생성: ${markers.length}개`);
+
         setMapMarkers(markers);
-        setClusterData(clusters);
-        setMapDiaries([]);
       } else {
         // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드 (일반 지도)
         const diaries = await MapService.getMapDiaries(query);
+        console.log(`다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`);
+
         const markers = diaries.map(diary => ({
           id: diary.diaryId,
           lat: diary.latitude,
@@ -150,17 +152,17 @@ function SearchContent() {
           profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
           title: diary.title,
         }));
-        console.log(markers, 'markers');
+        console.log(`다이어리 마커 생성: ${markers.length}개`);
+
         setMapMarkers(markers);
-        setMapDiaries(diaries);
-        setClusterData([]);
       }
     } catch (error) {
       console.error('맵 데이터 로드 중 오류 발생:', error);
+      setMapMarkers([]); // 오류 시 마커 초기화
     } finally {
       setMapLoading(false);
     }
-  }, [mapBounds, zoomLevel, mapLoading]);
+  }, [mapBounds, zoomLevel, mapLoading]); // clusterData와 mapDiaries 의존성 제거
 
   // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
   useEffect(() => {
@@ -183,17 +185,34 @@ function SearchContent() {
         clearTimeout(mapDataTimerRef.current);
       }
     };
-  }, [mapBounds, zoomLevel]); // loadMapData는 의존성 배열에서 제외 (무한 루프 방지)
+  }, [mapBounds, zoomLevel, loadMapData]);
 
   // 줌 레벨 변경 처리 함수
   const handleZoomChanged = useCallback(
     (newZoom: number) => {
       if (newZoom !== zoomLevel) {
+        console.log('줌 레벨 변경:', newZoom, '이전:', zoomLevel);
         setZoomLevel(newZoom);
+
+        // 줌 레벨 변경 시 바로 로딩 상태 표시 (사용자 피드백 개선)
+        if (mapBounds) {
+          setMapLoading(true);
+
+          // 타이머 동작 여부와 상관없이 즉시 마커 초기화
+          // 줌 레벨 변경 시 이전 마커가 잠시 표시되는 문제 방지
+          if (newZoom <= 13) {
+            if (mapMarkers.some(m => m.count === undefined)) {
+              setMapMarkers([]); // 개별 마커에서 클러스터로 전환 시 초기화
+            }
+          } else {
+            if (mapMarkers.some(m => m.count !== undefined)) {
+              setMapMarkers([]); // 클러스터에서 개별 마커로 전환 시 초기화
+            }
+          }
+        }
       }
-      console.log(newZoom, 'newZoom');
     },
-    [zoomLevel]
+    [zoomLevel, mapBounds, mapMarkers]
   );
 
   // 맵 경계 변경 처리 함수
@@ -202,13 +221,14 @@ function SearchContent() {
       // 기존 bounds와 새 bounds가 동일하면 상태 업데이트 하지 않음
       if (
         mapBounds &&
-        bounds.north === mapBounds.north &&
-        bounds.south === mapBounds.south &&
-        bounds.east === mapBounds.east &&
-        bounds.west === mapBounds.west
+        Math.abs(bounds.north - mapBounds.north) < 0.0001 &&
+        Math.abs(bounds.south - mapBounds.south) < 0.0001 &&
+        Math.abs(bounds.east - mapBounds.east) < 0.0001 &&
+        Math.abs(bounds.west - mapBounds.west) < 0.0001
       ) {
         return;
       }
+      console.log('맵 경계 변경:', bounds);
       setMapBounds(bounds);
     },
     [mapBounds]
@@ -345,6 +365,7 @@ function SearchContent() {
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent
+            key={`map-${zoomLevel}-${mapMarkers.length}`} // 키 추가로 강제 리렌더링 유도
             markers={mapMarkers?.filter(marker => marker.lat && marker.lng) ?? []}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
