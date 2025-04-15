@@ -28,7 +28,7 @@ export namespace User {
 
     nickname: string;
 
-    thumbNail: string;
+    thumbnailUrl: string;
   }
 
   export class CreateProfileDto {

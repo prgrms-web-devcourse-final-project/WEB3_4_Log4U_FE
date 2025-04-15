@@ -278,7 +278,7 @@ export default function ProfileSetupPage() {
                       setImageError(true);
                     }}
                   />
-                  <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center'>
+                  <div className='absolute inset-0 bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center'>
                     <span className='text-white opacity-0 group-hover:opacity-100'>변경하기</span>
                   </div>
                 </>
