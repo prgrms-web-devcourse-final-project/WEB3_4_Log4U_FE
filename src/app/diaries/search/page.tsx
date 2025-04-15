@@ -170,6 +170,7 @@ function SearchContent() {
       if (newZoom !== zoomLevel) {
         setZoomLevel(newZoom);
       }
+      console.log(newZoom, 'newZoom');
     },
     [zoomLevel]
   );
@@ -236,8 +237,7 @@ function SearchContent() {
   // 맵에 표시할 마커 데이터 생성
   const mapMarkers = useMemo(() => {
     if (zoomLevel <= 13 && clusterData.length > 0) {
-      // 클러스터 데이터 마커
-      return clusterData.map(cluster => ({
+      const clusterMarkers = clusterData.map(cluster => ({
         id: cluster.areaId,
         lat: cluster.lat,
         lng: cluster.lon,
@@ -245,26 +245,21 @@ function SearchContent() {
         count: cluster.diaryCount,
         title: `${cluster.areaName} (${cluster.diaryCount}개)`,
       }));
+      // 클러스터 데이터 마커
+      return clusterMarkers;
     } else if (zoomLevel > 13 && mapDiaries.length > 0) {
+      const markers = mapDiaries.map(diary => ({
+        id: diary.diaryId,
+        lat: diary.latitude,
+        lng: diary.longitude,
+        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+        title: diary.title,
+      }));
       // 다이어리 마커
-      return mapDiaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
-    } else {
-      // 검색 결과에서의 마커 (백업)
-      return diaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
+      console.log(markers, 'markers');
+      return markers;
     }
-  }, [zoomLevel, clusterData, mapDiaries, diaries]);
+  }, [zoomLevel, clusterData, mapDiaries]);
 
   // 검색 제출 핸들러
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -356,7 +351,7 @@ function SearchContent() {
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent
-            markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
+            markers={mapMarkers?.filter(marker => marker.lat && marker.lng) ?? []}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
             initialZoom={zoomLevel}
