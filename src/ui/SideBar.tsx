@@ -76,21 +76,18 @@ export function RightSideBar() {
   useEffect(() => {
     const fetchLocationData = async () => {
       try {
-        console.log('위치 정보 가져오기 시작');
         setLocationInfo(prev => ({ ...prev, loading: true, error: false }));
 
         // 브라우저의 Geolocation API를 사용하여 현재 위치 가져오기
-        console.log('navigator.geolocation API 호출 시도');
+
         navigator.geolocation.getCurrentPosition(
           async position => {
-            console.log('위치 정보 획득 성공:', position.coords);
             try {
               const { latitude, longitude } = position.coords;
 
               // MapService를 사용하여 위치 정보 가져오기
-              console.log(`역지오코딩 API 호출 시도: lat=${latitude}, lng=${longitude}`);
+
               const geoData = await MapService.getGeolocation(latitude, longitude);
-              console.log('역지오코딩 결과:', geoData);
 
               if (geoData && geoData.results && geoData.results.length > 0) {
                 const result = geoData.results[0];
@@ -98,7 +95,6 @@ export function RightSideBar() {
                 const sigungu = result.region.area2?.name || '알 수 없음';
                 const eupmyeondong = result.region.area3?.name || '알 수 없음';
 
-                console.log('주소 정보:', { sido, sigungu, eupmyeondong });
                 // 위치 정보 상태 업데이트
                 setLocationInfo(prev => ({
                   ...prev,
@@ -110,7 +106,6 @@ export function RightSideBar() {
 
                 // 날씨 정보는 별도의 API가 필요하므로 여기서는 기존 값을 유지
               } else {
-                console.log('역지오코딩 결과가 없음');
                 throw new Error('위치 정보를 찾을 수 없습니다.');
               }
             } catch (error) {
@@ -144,8 +139,6 @@ export function RightSideBar() {
         setLoading(true);
         const userData = await UserService.getMe();
         setUser(userData);
-
-        console.log(user);
       } catch (error) {
         console.error('사용자 정보 로드 실패:', error);
       } finally {

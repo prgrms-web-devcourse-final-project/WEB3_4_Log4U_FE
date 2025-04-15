@@ -10,7 +10,7 @@ import { Map } from '@root/types/map';
 import { User } from '@root/types/user';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import FollowModal from '@/app/mypage/components/FollowModal';
 
 // 다이어리 카드 컴포넌트
@@ -136,6 +136,17 @@ export default function UserProfilePage() {
   const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
   const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
+  // 마커 데이터를 state로 관리
+  const [mapMarkers, setMapMarkers] = useState<
+    {
+      id: string | number;
+      lat: number;
+      lng: number;
+      profileUrl: string;
+      count?: number;
+      title?: string;
+    }[]
+  >([]);
 
   // IntersectionObserver를 위한 ref
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -319,11 +330,11 @@ export default function UserProfilePage() {
     };
   }, [mapBounds, zoomLevel, profile, loadMapData]);
 
-  // 맵에 표시할 마커 데이터 생성
-  const mapMarkers = useMemo(() => {
-    if (zoomLevel <= 13) {
+  // 마커 데이터 업데이트를 위한 useEffect 추가
+  useEffect(() => {
+    if (zoomLevel <= 13 && clusterData.length > 0) {
       // 클러스터 데이터 마커
-      return clusterData.map(cluster => ({
+      const markers = clusterData.map(cluster => ({
         id: cluster.areaId,
         lat: cluster.lat,
         lng: cluster.lon,
@@ -331,17 +342,29 @@ export default function UserProfilePage() {
         count: cluster.diaryCount,
         title: `${cluster.areaName} (${cluster.diaryCount}개)`,
       }));
-    } else {
+      setMapMarkers(markers);
+    } else if (zoomLevel > 13 && mapDiaries.length > 0) {
       // 다이어리 마커
-      return mapDiaries.map(diary => ({
+      const markers = mapDiaries.map(diary => ({
         id: diary.diaryId,
         lat: diary.latitude,
         lng: diary.longitude,
         profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
         title: diary.title,
       }));
+      setMapMarkers(markers);
+    } else {
+      // 검색 결과에서의 마커 (백업)
+      const markers = diaries.map(diary => ({
+        id: diary.diaryId,
+        lat: diary.latitude,
+        lng: diary.longitude,
+        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+        title: diary.title,
+      }));
+      setMapMarkers(markers);
     }
-  }, [zoomLevel, clusterData, mapDiaries]);
+  }, [zoomLevel, clusterData, mapDiaries, diaries]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -470,7 +493,8 @@ export default function UserProfilePage() {
               </div>
               <div className='flex space-x-4 text-sm'>
                 <div>
-                  <span className='font-semibold'>{profile.diaryCount}</span> 게시물
+                  <span className='font-semibold'>{profile.diaryCount ?? diaries.length}</span>{' '}
+                  게시물
                 </div>
                 <div
                   className='cursor-pointer hover:text-blue-500 transition'
@@ -503,12 +527,15 @@ export default function UserProfilePage() {
         </div>
 
         {/* 구글 맵 */}
-        <GoogleMapComponent
-          markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
-          onZoomChanged={handleZoomChanged}
-          onBoundsChanged={handleBoundsChanged}
-          initialZoom={zoomLevel}
-        />
+        <div className='h-[300px] overflow-hidden border rounded-md shadow-sm my-4 mx-6'>
+          <GoogleMapComponent
+            markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
+            onZoomChanged={handleZoomChanged}
+            onBoundsChanged={handleBoundsChanged}
+            initialZoom={zoomLevel}
+            height='300px'
+          />
+        </div>
 
         {/* 공개된 다이어리 섹션 - 스크롤 가능한 별도 박스 */}
         <div className='px-6 py-4'>

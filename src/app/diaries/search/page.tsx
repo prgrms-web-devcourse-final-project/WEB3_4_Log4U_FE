@@ -1,14 +1,14 @@
 // app/search/page.tsx
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback, Suspense, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import GoogleMapComponent from '@/app/googleMap';
+import GoogleMapComponent, { MapMarker } from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
 import { MapService } from '@root/services/map';
 import { Diary } from '@root/types/diary';
 import { Map } from '@root/types/map';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 // SearchContent 컴포넌트로 분리
 function SearchContent() {
@@ -37,9 +37,10 @@ function SearchContent() {
     east: number;
     west: number;
   } | null>(null);
-  const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
-  const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
+
   const [mapLoading, setMapLoading] = useState(false);
+  // 마커 데이터를 state로 관리
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
 
   // 맵 데이터 로드를 위한 디바운싱 타이머 참조
   const mapDataTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,20 +127,42 @@ function SearchContent() {
       if (zoomLevel <= 13) {
         // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드 (일반 지도)
         const clusters = await MapService.getMapCluster(query);
-        setClusterData(clusters);
-        setMapDiaries([]);
+        console.log(`클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`);
+
+        const markers = clusters.map(cluster => ({
+          id: cluster.areaId,
+          lat: cluster.lat,
+          lng: cluster.lon,
+          profileUrl: '/hot-logger.png', // 클러스터 아이콘
+          count: cluster.diaryCount,
+          title: `${cluster.areaName} (${cluster.diaryCount}개)`,
+        }));
+        console.log(`클러스터 마커 생성: ${markers.length}개`);
+
+        setMapMarkers(markers);
       } else {
         // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드 (일반 지도)
         const diaries = await MapService.getMapDiaries(query);
-        setMapDiaries(diaries);
-        setClusterData([]);
+        console.log(`다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`);
+
+        const markers = diaries.map(diary => ({
+          id: diary.diaryId,
+          lat: diary.latitude,
+          lng: diary.longitude,
+          profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+          title: diary.title,
+        }));
+        console.log(`다이어리 마커 생성: ${markers.length}개`);
+
+        setMapMarkers(markers);
       }
     } catch (error) {
       console.error('맵 데이터 로드 중 오류 발생:', error);
+      setMapMarkers([]); // 오류 시 마커 초기화
     } finally {
       setMapLoading(false);
     }
-  }, [mapBounds, zoomLevel, mapLoading]);
+  }, [mapBounds, zoomLevel, mapLoading]); // clusterData와 mapDiaries 의존성 제거
 
   // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
   useEffect(() => {
@@ -162,16 +185,34 @@ function SearchContent() {
         clearTimeout(mapDataTimerRef.current);
       }
     };
-  }, [mapBounds, zoomLevel]); // loadMapData는 의존성 배열에서 제외 (무한 루프 방지)
+  }, [mapBounds, zoomLevel]);
 
   // 줌 레벨 변경 처리 함수
   const handleZoomChanged = useCallback(
     (newZoom: number) => {
       if (newZoom !== zoomLevel) {
+        console.log('줌 레벨 변경:', newZoom, '이전:', zoomLevel);
         setZoomLevel(newZoom);
+
+        // 줌 레벨 변경 시 바로 로딩 상태 표시 (사용자 피드백 개선)
+        if (mapBounds) {
+          setMapLoading(true);
+
+          // 타이머 동작 여부와 상관없이 즉시 마커 초기화
+          // 줌 레벨 변경 시 이전 마커가 잠시 표시되는 문제 방지
+          if (newZoom <= 13) {
+            if (mapMarkers.some(m => m.count === undefined)) {
+              setMapMarkers([]); // 개별 마커에서 클러스터로 전환 시 초기화
+            }
+          } else {
+            if (mapMarkers.some(m => m.count !== undefined)) {
+              setMapMarkers([]); // 클러스터에서 개별 마커로 전환 시 초기화
+            }
+          }
+        }
       }
     },
-    [zoomLevel]
+    [zoomLevel, mapBounds, mapMarkers]
   );
 
   // 맵 경계 변경 처리 함수
@@ -180,13 +221,14 @@ function SearchContent() {
       // 기존 bounds와 새 bounds가 동일하면 상태 업데이트 하지 않음
       if (
         mapBounds &&
-        bounds.north === mapBounds.north &&
-        bounds.south === mapBounds.south &&
-        bounds.east === mapBounds.east &&
-        bounds.west === mapBounds.west
+        Math.abs(bounds.north - mapBounds.north) < 0.0001 &&
+        Math.abs(bounds.south - mapBounds.south) < 0.0001 &&
+        Math.abs(bounds.east - mapBounds.east) < 0.0001 &&
+        Math.abs(bounds.west - mapBounds.west) < 0.0001
       ) {
         return;
       }
+      console.log('맵 경계 변경:', bounds);
       setMapBounds(bounds);
     },
     [mapBounds]
@@ -232,39 +274,6 @@ function SearchContent() {
       }
     };
   }, [fetchSearchResults, hasMore, loading]);
-
-  // 맵에 표시할 마커 데이터 생성
-  const mapMarkers = useMemo(() => {
-    if (zoomLevel <= 13 && clusterData.length > 0) {
-      // 클러스터 데이터 마커
-      return clusterData.map(cluster => ({
-        id: cluster.areaId,
-        lat: cluster.lat,
-        lng: cluster.lon,
-        profileUrl: '/hot-logger.png', // 클러스터 아이콘
-        count: cluster.diaryCount,
-        title: `${cluster.areaName} (${cluster.diaryCount}개)`,
-      }));
-    } else if (zoomLevel > 13 && mapDiaries.length > 0) {
-      // 다이어리 마커
-      return mapDiaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
-    } else {
-      // 검색 결과에서의 마커 (백업)
-      return diaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
-    }
-  }, [zoomLevel, clusterData, mapDiaries, diaries]);
 
   // 검색 제출 핸들러
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -352,11 +361,12 @@ function SearchContent() {
         </div>
 
         {/* 구글 맵 영역 */}
-        <div className='mt-4 relative rounded-lg overflow-hidden h-64'>
+        <div className='mt-4 relative rounded-lg overflow-hidden h-[300px] border shadow-sm'>
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent
-            markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
+            key={`map-${zoomLevel}-${mapMarkers.length}`} // 키 추가로 강제 리렌더링 유도
+            markers={mapMarkers?.filter(marker => marker.lat && marker.lng) ?? []}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
             initialZoom={zoomLevel}
