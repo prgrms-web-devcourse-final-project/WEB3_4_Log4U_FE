@@ -576,13 +576,13 @@ export default function UserProfilePage() {
         </div>
 
         {/* 구글 맵 */}
-        <div className='h-[300px] overflow-hidden border rounded-md shadow-sm my-4 mx-6'>
+        <div className='h-[400px] overflow-hidden border rounded-md shadow-sm my-4 mx-6'>
           <GoogleMapComponent
             markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
             initialZoom={zoomLevel}
-            height='300px'
+            height='400px'
           />
         </div>
 

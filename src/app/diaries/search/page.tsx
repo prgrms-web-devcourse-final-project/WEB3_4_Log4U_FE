@@ -419,7 +419,7 @@ function SearchContent() {
         </div>
 
         {/* 구글 맵 영역 */}
-        <div className='mt-4 relative rounded-lg overflow-hidden h-[300px] border shadow-sm'>
+        <div className='mt-4 relative rounded-lg overflow-hidden h-[400px] border shadow-sm'>
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent
@@ -430,6 +430,7 @@ function SearchContent() {
             onCenterChanged={handleCenterChanged}
             initialZoom={zoomLevel}
             initialCenter={mapCenter} // 현재 중심 좌표 전달
+            height='400px'
           />
 
           {/* 맵 로딩 오버레이 */}
