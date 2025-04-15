@@ -356,7 +356,7 @@ function SearchContent() {
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent
-            markers={mapMarkers}
+            markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
             initialZoom={zoomLevel}

@@ -362,25 +362,39 @@ export default function HomePage() {
 
   // 맵에 표시할 마커 데이터 생성
   const mapMarkers = useMemo(() => {
+    // 유효한 위도/경도 값인지 확인하는 헬퍼 함수
+    const isValidCoordinate = (value: unknown): boolean => {
+      return typeof value === 'number' && !isNaN(value) && isFinite(value);
+    };
+
     if (zoomLevel <= 13) {
       // 클러스터 데이터 마커
-      return clusterData.map(cluster => ({
-        id: `cluster_${cluster.areaId}`, // 고유한 ID 생성: 'cluster_' 접두사 추가
-        lat: cluster.lat,
-        lng: cluster.lon,
-        profileUrl: '/hot-logger.png', // 클러스터 아이콘
-        count: cluster.diaryCount,
-        title: `${cluster.areaName} (${cluster.diaryCount}개)`,
-      }));
+      return clusterData
+        .filter(cluster => isValidCoordinate(cluster.lat) && isValidCoordinate(cluster.lon))
+        .map(cluster => ({
+          id: `cluster_${cluster.areaId}`, // 고유한 ID 생성: 'cluster_' 접두사 추가
+          lat: Number(cluster.lat), // 명시적으로 숫자로 변환
+          lng: Number(cluster.lon), // 명시적으로 숫자로 변환
+          profileUrl: '/hot-logger.png', // 클러스터 아이콘
+          count: cluster.diaryCount,
+          title: `${cluster.areaName || '지역'} (${cluster.diaryCount}개)`,
+        }));
     } else {
       // 다이어리 마커
-      return mapDiaries.map(diary => ({
-        id: `diary_${diary.diaryId}`, // 고유한 ID 생성: 'diary_' 접두사 추가
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
+      return mapDiaries
+        .filter(diary => isValidCoordinate(diary.latitude) && isValidCoordinate(diary.longitude))
+        .map(diary => {
+          console.log(diary);
+          console.log(diary.latitude);
+          console.log(diary.longitude);
+          return {
+            id: `diary_${diary.diaryId}`, // 고유한 ID 생성: 'diary_' 접두사 추가
+            lat: Number(diary.latitude), // 명시적으로 숫자로 변환
+            lng: Number(diary.longitude), // 명시적으로 숫자로 변환
+            profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+            title: diary.title || '제목 없음',
+          };
+        });
     }
   }, [zoomLevel, clusterData, mapDiaries]);
 
@@ -431,7 +445,7 @@ export default function HomePage() {
 
         {/* 구글 맵 */}
         <GoogleMapComponent
-          markers={mapMarkers}
+          markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
           onZoomChanged={handleZoomChanged}
           onBoundsChanged={handleBoundsChanged}
           initialZoom={zoomLevel}
