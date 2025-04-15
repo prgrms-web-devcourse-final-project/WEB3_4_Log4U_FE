@@ -212,7 +212,15 @@ export default function MyPage() {
             </Link>
             <button
               className='p-2 bg-white text-[var(--color-accent)] border border-[var(--color-accent)] rounded-lg flex items-center hover:bg-gray-50 shadow-sm transition-all duration-200'
-              onClick={() => UserService.logout()}
+              onClick={async () => {
+                try {
+                  await UserService.logout();
+                  // 로그아웃 후 홈페이지로 리디렉션하고 모든 상태 초기화
+                  window.location.href = '/';
+                } catch (error) {
+                  console.error('로그아웃 실패:', error);
+                }
+              }}
             >
               <svg
                 xmlns='http://www.w3.org/2000/svg'
