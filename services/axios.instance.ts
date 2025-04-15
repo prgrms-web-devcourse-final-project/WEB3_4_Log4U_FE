@@ -29,8 +29,10 @@ axiosInstance.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    // 401 에러이고 재시도하지 않은 요청인 경우
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401 에러, 재시도하지 않은 요청, 로그인 페이지 아닐때만 호출
+    if (error.response?.status === 401 && 
+      !originalRequest._retry &&
+      window.location.pathname !== '/login') {
       if (isRefreshing) {
         // 이미 토큰 갱신 중이면 대기열에 추가
         return new Promise(resolve => {
