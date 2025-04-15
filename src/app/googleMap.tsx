@@ -1,7 +1,7 @@
-'use client';
+import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api';
+import { useJsApiLoader } from '@react-google-maps/api';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface MapMarker {
   id: string | number;
@@ -43,6 +43,8 @@ export default function GoogleMapComponent({
   const [sortedMarkers, setSortedMarkers] = useState<(MapMarker & { distance?: number })[]>([]);
   // 현재 줌 레벨 상태 추가
   const [currentZoom, setCurrentZoom] = useState(initialZoom);
+  // 최근에 이벤트가 처리된 시간 저장
+  const lastEventTimeRef = useRef<number>(0);
 
   // 구글 맵 API 로드
   const { isLoaded } = useJsApiLoader({
@@ -63,15 +65,12 @@ export default function GoogleMapComponent({
         position => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
-          console.log('사용자 현재 위치:', latitude, longitude);
         },
         error => {
           console.error('위치 정보를 가져오는데 실패했습니다:', error);
         },
         { enableHighAccuracy: true }
       );
-    } else {
-      console.log('이 브라우저에서는 위치 정보를 지원하지 않습니다.');
     }
   }, []);
 
@@ -84,7 +83,10 @@ export default function GoogleMapComponent({
 
     // 다이어리 마커만 필터링 (클러스터가 아닌 마커)
     const diaryMarkers = markers.filter(marker => !marker.count);
-    if (diaryMarkers.length === 0) return;
+    if (diaryMarkers.length === 0) {
+      setSortedMarkers([]);
+      return;
+    }
 
     // 거리 계산 함수 (하버사인 공식)
     const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -110,7 +112,6 @@ export default function GoogleMapComponent({
 
     // 거리순으로 정렬
     const sorted = [...markersWithDistance].sort((a, b) => a.distance - b.distance);
-    console.log('가까운 순서로 정렬된 마커:', sorted);
 
     // 경로를 그릴 마커 설정 (최대 10개까지만)
     setSortedMarkers(sorted.slice(0, 10));
@@ -139,70 +140,78 @@ export default function GoogleMapComponent({
     [onBoundsChanged]
   );
 
+  // 이벤트 스로틀링 함수
+  const throttleEvent = useCallback((callback: Function) => {
+    const now = Date.now();
+    // 마지막 이벤트로부터 300ms 이상 지났을 때만 처리
+    if (now - lastEventTimeRef.current > 300) {
+      lastEventTimeRef.current = now;
+      callback();
+    }
+  }, []);
+
   // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때)
   const handleIdle = useCallback(() => {
     if (!mapRef.current) return;
 
-    // 중심 좌표 업데이트
-    const newCenter = mapRef.current.getCenter();
-    if (newCenter) {
-      setCenter({
-        lat: newCenter.lat(),
-        lng: newCenter.lng(),
-      });
-    }
-
-    // 줌 레벨 정보 전달 - 줌 레벨이 변경된 경우에만
-    if (onZoomChanged) {
-      const newZoom = mapRef.current.getZoom() || initialZoom;
-      if (newZoom !== currentZoom) {
-        setCurrentZoom(newZoom); // 현재 줌 레벨 업데이트
-        onZoomChanged(newZoom);
-        console.log('줌 레벨 변경 감지:', newZoom); // 디버깅용 로그
-      }
-    }
-
-    // 맵 경계 정보 전달
-    if (onBoundsChanged) {
-      const bounds = mapRef.current.getBounds();
-      if (bounds) {
-        const ne = bounds.getNorthEast();
-        const sw = bounds.getSouthWest();
-        onBoundsChanged({
-          north: ne.lat(),
-          east: ne.lng(),
-          south: sw.lat(),
-          west: sw.lng(),
+    throttleEvent(() => {
+      // 중심 좌표 업데이트
+      const newCenter = mapRef.current?.getCenter();
+      if (newCenter) {
+        setCenter({
+          lat: newCenter.lat(),
+          lng: newCenter.lng(),
         });
       }
-    }
-  }, [onZoomChanged, onBoundsChanged, initialZoom, currentZoom]); // currentZoom 의존성 추가
+
+      // 줌 레벨 정보 전달 - 줌 레벨이 변경된 경우에만
+      if (onZoomChanged) {
+        const newZoom = mapRef.current?.getZoom() || initialZoom;
+        // 정수 부분만 비교하여 실질적인 변경 시에만 업데이트
+        if (Math.floor(newZoom) !== Math.floor(currentZoom)) {
+          setCurrentZoom(newZoom); // 현재 줌 레벨 업데이트
+          onZoomChanged(newZoom);
+        }
+      }
+
+      // 맵 경계 정보 전달
+      if (onBoundsChanged && mapRef.current) {
+        const bounds = mapRef.current.getBounds();
+        if (bounds) {
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          onBoundsChanged({
+            north: ne.lat(),
+            east: ne.lng(),
+            south: sw.lat(),
+            west: sw.lng(),
+          });
+        }
+      }
+    });
+  }, [onZoomChanged, onBoundsChanged, initialZoom, currentZoom, throttleEvent]);
 
   // 경로 포인트 생성 (사용자 위치 + 정렬된 마커들)
-  const pathPoints =
-    userLocation && sortedMarkers.length > 0
+  const pathPoints = useMemo(() => {
+    return userLocation && sortedMarkers.length > 0
       ? [
           userLocation, // 시작점 (사용자 위치)
           ...sortedMarkers.map(marker => ({ lat: marker.lat, lng: marker.lng })), // 가까운 마커들
         ]
       : [];
+  }, [userLocation, sortedMarkers]);
 
-  // 마커 렌더링
-  const renderMarkers = () => {
-    console.log(markers);
+  // 마커 렌더링 - 렌더링마다 불필요한 로그 제거
+  const renderedMarkers = useMemo(() => {
     if (!markers || markers.length === 0) {
-      console.log('표시할 마커가 없습니다.');
       return null;
     }
-
-    console.log('렌더링할 마커 수:', markers.length);
 
     return markers
       .map(marker => {
         try {
           // 좌표 확인
           if (!marker || !marker.lat || !marker.lng) {
-            console.warn('유효하지 않은 마커 좌표:', marker);
             return null;
           }
 
@@ -270,7 +279,7 @@ export default function GoogleMapComponent({
 
             return (
               <Marker
-                key={marker.id}
+                key={`cluster-${marker.id}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 icon={{
                   url: createClusterIcon(marker.count, style),
@@ -283,24 +292,18 @@ export default function GoogleMapComponent({
             );
           }
 
-          // 일반 다이어리 마커 - 이미지 썸네일 설정
-          console.log(`다이어리 마커 생성: ID=${marker.id}, 썸네일=${marker.profileUrl || '없음'}`);
-
           // 정렬된 마커 경로에 포함된 마커인지 확인
           const isInPath = sortedMarkers.some(m => m.id === marker.id);
 
           return (
             <Marker
-              key={marker.id}
+              key={`diary-${marker.id}`}
               position={{ lat: marker.lat, lng: marker.lng }}
-              // 기본 마커 사용
               title={marker.title}
-              // 경로에 포함된 마커는 더 높은 z-index로 설정하여 강조
               zIndex={isInPath ? 100 : 10}
               onClick={() => {
                 if (marker.id && typeof marker.id === 'string' && marker.id.startsWith('diary_')) {
                   const diaryId = marker.id.replace('diary_', '');
-                  // 다이어리 ID가 숫자인 경우에만 이동
                   if (!isNaN(Number(diaryId))) {
                     window.location.href = `/diaries/${diaryId}`;
                   }
@@ -309,12 +312,11 @@ export default function GoogleMapComponent({
             />
           );
         } catch (error) {
-          console.error('마커 렌더링 오류:', error, marker);
           return null;
         }
       })
       .filter(Boolean); // null 값 필터링
-  };
+  }, [markers, sortedMarkers]);
 
   // 로딩 중일 때
   if (!isLoaded)
@@ -344,18 +346,13 @@ export default function GoogleMapComponent({
           ],
         }}
       >
-        {/* 마커들 렌더링 */}
-        {renderMarkers()}
+        {/* 마커들 렌더링 - 함수 호출 대신 메모이제이션된 값 사용 */}
+        {renderedMarkers}
 
         {/* 사용자 위치 마커 (있을 경우) */}
         {userLocation && (
           <Marker
             position={userLocation}
-            // icon={{
-            //   url: '/user-location.png', // 사용자 위치 아이콘
-            //   scaledSize: new window.google.maps.Size(40, 40),
-            //   anchor: new window.google.maps.Point(20, 20),
-            // }}
             title='내 위치'
             zIndex={1000} // 가장 위에 표시
           />

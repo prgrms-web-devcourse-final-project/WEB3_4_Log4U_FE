@@ -165,7 +165,40 @@ function SearchContent() {
     } finally {
       setMapLoading(false);
     }
-  }, [mapBounds, zoomLevel, mapLoading]); // clusterData와 mapDiaries 의존성 제거
+  }, [mapBounds, zoomLevel, mapLoading]);
+
+  // 줌 레벨 변경 처리 함수
+  const handleZoomChanged = useCallback(
+    (newZoom: number) => {
+      // 정수로 변환하거나 소수점 한 자리까지만 비교하여 변경 감지
+      const roundedNewZoom = Math.round(newZoom);
+      const roundedCurrentZoom = Math.round(zoomLevel);
+
+      if (roundedNewZoom !== roundedCurrentZoom) {
+        console.log('줌 레벨 변경:', roundedNewZoom, '이전:', roundedCurrentZoom);
+        setZoomLevel(newZoom);
+
+        // 줌 레벨 변경 시 즉시 새 데이터 로드
+        const thresholdCrossed =
+          (roundedCurrentZoom <= 13 && roundedNewZoom > 13) ||
+          (roundedCurrentZoom > 13 && roundedNewZoom <= 13);
+
+        if (thresholdCrossed && mapBounds) {
+          // 기존 타이머 취소
+          if (mapDataTimerRef.current) {
+            clearTimeout(mapDataTimerRef.current);
+          }
+
+          setMapLoading(true);
+          setMapMarkers([]); // 마커 초기화
+
+          // 즉시 데이터 로드 시작
+          loadMapData();
+        }
+      }
+    },
+    [zoomLevel, mapBounds, loadMapData]
+  );
 
   // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
   useEffect(() => {
@@ -189,34 +222,6 @@ function SearchContent() {
       }
     };
   }, [mapBounds, zoomLevel]);
-
-  // 줌 레벨 변경 처리 함수
-  const handleZoomChanged = useCallback(
-    (newZoom: number) => {
-      if (newZoom !== zoomLevel) {
-        console.log('줌 레벨 변경:', newZoom, '이전:', zoomLevel);
-        setZoomLevel(newZoom);
-
-        // 줌 레벨 변경 시 바로 로딩 상태 표시 (사용자 피드백 개선)
-        if (mapBounds) {
-          setMapLoading(true);
-
-          // 타이머 동작 여부와 상관없이 즉시 마커 초기화
-          // 줌 레벨 변경 시 이전 마커가 잠시 표시되는 문제 방지
-          if (newZoom <= 13) {
-            if (mapMarkers.some(m => m.count === undefined)) {
-              setMapMarkers([]); // 개별 마커에서 클러스터로 전환 시 초기화
-            }
-          } else {
-            if (mapMarkers.some(m => m.count !== undefined)) {
-              setMapMarkers([]); // 클러스터에서 개별 마커로 전환 시 초기화
-            }
-          }
-        }
-      }
-    },
-    [zoomLevel, mapBounds, mapMarkers]
-  );
 
   // 맵 경계 변경 처리 함수
   const handleBoundsChanged = useCallback(
