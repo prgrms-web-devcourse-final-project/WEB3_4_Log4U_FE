@@ -1,6 +1,6 @@
 'use client';
 
-import GoogleMapComponent from '@/app/googleMap';
+import GoogleMapComponent, { MapMarker } from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
 import { FollowService } from '@root/services/follow';
 import { MapService } from '@root/services/map';
@@ -9,7 +9,7 @@ import { Diary } from '@root/types/diary';
 import { Map } from '@root/types/map';
 import { User } from '@root/types/user';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import FollowModal from './mypage/components/FollowModal';
 
 // 다이어리 카드 컴포넌트
@@ -128,6 +128,8 @@ export default function HomePage() {
   const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
   const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
+  // 마커 데이터를 state로 관리
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
 
   // IntersectionObserver를 위한 ref
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -396,16 +398,16 @@ export default function HomePage() {
     };
   }, [mapBounds, zoomLevel, loadMapData]);
 
-  // 맵에 표시할 마커 데이터 생성
-  const mapMarkers = useMemo(() => {
+  // 마커 데이터 업데이트를 위한 useEffect 추가
+  useEffect(() => {
     // 유효한 위도/경도 값인지 확인하는 헬퍼 함수
     const isValidCoordinate = (value: unknown): boolean => {
       return typeof value === 'number' && !isNaN(value) && isFinite(value);
     };
 
-    if (zoomLevel <= 13) {
+    if (zoomLevel <= 13 && clusterData.length > 0) {
       // 클러스터 데이터 마커
-      return clusterData
+      const markers = clusterData
         .filter(cluster => isValidCoordinate(cluster.lat) && isValidCoordinate(cluster.lon))
         .map(cluster => ({
           id: `cluster_${cluster.areaId}`, // 고유한 ID 생성: 'cluster_' 접두사 추가
@@ -415,6 +417,7 @@ export default function HomePage() {
           count: cluster.diaryCount,
           title: `${cluster.areaName || '지역'} (${cluster.diaryCount}개)`,
         }));
+      setMapMarkers(markers);
     } else {
       // 다이어리 마커 생성 전 로깅
       console.log('다이어리 마커 생성 시작, 총 개수:', mapDiaries.length);
@@ -448,7 +451,7 @@ export default function HomePage() {
         });
 
       console.log('유효한 다이어리 마커 생성 완료, 총 개수:', diaryMarkers.length);
-      return diaryMarkers;
+      setMapMarkers(diaryMarkers);
     }
   }, [zoomLevel, clusterData, mapDiaries]);
 

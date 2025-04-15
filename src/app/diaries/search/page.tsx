@@ -1,14 +1,14 @@
 // app/search/page.tsx
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback, Suspense, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import GoogleMapComponent from '@/app/googleMap';
+import GoogleMapComponent, { MapMarker } from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
 import { MapService } from '@root/services/map';
 import { Diary } from '@root/types/diary';
 import { Map } from '@root/types/map';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 // SearchContent 컴포넌트로 분리
 function SearchContent() {
@@ -40,6 +40,8 @@ function SearchContent() {
   const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
   const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
+  // 마커 데이터를 state로 관리
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
 
   // 맵 데이터 로드를 위한 디바운싱 타이머 참조
   const mapDataTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,11 +128,30 @@ function SearchContent() {
       if (zoomLevel <= 13) {
         // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드 (일반 지도)
         const clusters = await MapService.getMapCluster(query);
+
+        const markers = clusters.map(cluster => ({
+          id: cluster.areaId,
+          lat: cluster.lat,
+          lng: cluster.lon,
+          profileUrl: '/hot-logger.png', // 클러스터 아이콘
+          count: cluster.diaryCount,
+          title: `${cluster.areaName} (${cluster.diaryCount}개)`,
+        }));
+        setMapMarkers(markers);
         setClusterData(clusters);
         setMapDiaries([]);
       } else {
         // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드 (일반 지도)
         const diaries = await MapService.getMapDiaries(query);
+        const markers = diaries.map(diary => ({
+          id: diary.diaryId,
+          lat: diary.latitude,
+          lng: diary.longitude,
+          profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+          title: diary.title,
+        }));
+        console.log(markers, 'markers');
+        setMapMarkers(markers);
         setMapDiaries(diaries);
         setClusterData([]);
       }
@@ -233,33 +254,6 @@ function SearchContent() {
       }
     };
   }, [fetchSearchResults, hasMore, loading]);
-
-  // 맵에 표시할 마커 데이터 생성
-  const mapMarkers = useMemo(() => {
-    if (zoomLevel <= 13 && clusterData.length > 0) {
-      const clusterMarkers = clusterData.map(cluster => ({
-        id: cluster.areaId,
-        lat: cluster.lat,
-        lng: cluster.lon,
-        profileUrl: '/hot-logger.png', // 클러스터 아이콘
-        count: cluster.diaryCount,
-        title: `${cluster.areaName} (${cluster.diaryCount}개)`,
-      }));
-      // 클러스터 데이터 마커
-      return clusterMarkers;
-    } else if (zoomLevel > 13 && mapDiaries.length > 0) {
-      const markers = mapDiaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
-      // 다이어리 마커
-      console.log(markers, 'markers');
-      return markers;
-    }
-  }, [zoomLevel, clusterData, mapDiaries]);
 
   // 검색 제출 핸들러
   const handleSearchSubmit = (e: React.FormEvent) => {

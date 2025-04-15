@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api';
 
-interface MapMarker {
+export interface MapMarker {
   id: string | number;
   lat: number;
   lng: number;
@@ -29,6 +29,7 @@ export default function GoogleMapComponent({
   pathColor = '#FF5353',
   height = '300px',
 }: GoogleMapComponentProps) {
+  console.log(markers, 'markers!!!!!!');
   // 맵 레퍼런스
   const mapRef = useRef<google.maps.Map | null>(null);
   // 지도 중심 좌표 상태 추가
@@ -40,6 +41,8 @@ export default function GoogleMapComponent({
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   // 경로 표시용 정렬된 마커 배열
   const [sortedMarkers, setSortedMarkers] = useState<(MapMarker & { distance?: number })[]>([]);
+  // 현재 줌 레벨 상태 추가
+  const [currentZoom, setCurrentZoom] = useState(initialZoom);
 
   // 구글 맵 API 로드
   const { isLoaded } = useJsApiLoader({
@@ -149,10 +152,14 @@ export default function GoogleMapComponent({
       });
     }
 
-    // 줌 레벨 정보 전달
+    // 줌 레벨 정보 전달 - 줌 레벨이 변경된 경우에만
     if (onZoomChanged) {
       const newZoom = mapRef.current.getZoom() || initialZoom;
-      onZoomChanged(newZoom);
+      if (newZoom !== currentZoom) {
+        setCurrentZoom(newZoom); // 현재 줌 레벨 업데이트
+        onZoomChanged(newZoom);
+        console.log('줌 레벨 변경 감지:', newZoom); // 디버깅용 로그
+      }
     }
 
     // 맵 경계 정보 전달
@@ -169,7 +176,7 @@ export default function GoogleMapComponent({
         });
       }
     }
-  }, [onZoomChanged, onBoundsChanged, initialZoom]);
+  }, [onZoomChanged, onBoundsChanged, initialZoom, currentZoom]); // currentZoom 의존성 추가
 
   // 경로 포인트 생성 (사용자 위치 + 정렬된 마커들)
   const pathPoints =
@@ -344,11 +351,11 @@ export default function GoogleMapComponent({
         {userLocation && (
           <Marker
             position={userLocation}
-            icon={{
-              url: '/user-location.png', // 사용자 위치 아이콘
-              scaledSize: new window.google.maps.Size(40, 40),
-              anchor: new window.google.maps.Point(20, 20),
-            }}
+            // icon={{
+            //   url: '/user-location.png', // 사용자 위치 아이콘
+            //   scaledSize: new window.google.maps.Size(40, 40),
+            //   anchor: new window.google.maps.Point(20, 20),
+            // }}
             title='내 위치'
             zIndex={1000} // 가장 위에 표시
           />
