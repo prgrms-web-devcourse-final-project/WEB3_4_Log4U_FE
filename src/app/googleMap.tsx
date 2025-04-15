@@ -1,5 +1,4 @@
 import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
-
 import { useJsApiLoader } from '@react-google-maps/api';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -12,13 +11,85 @@ export interface MapMarker {
   title?: string;
 }
 
+// 이미지 URL을 Base64로 변환하는 함수
+const convertImageToBase64 = async (imageUrl: string): Promise<string> => {
+  try {
+    // 이미지를 가져옵니다
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+
+    // Blob을 Base64로 변환
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('이미지 변환 중 오류 발생:', error);
+    // 오류 발생 시 기본 이미지 반환 (선택사항)
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+  }
+};
+
+// Base64 이미지를 사용한 커스텀 마커 생성 함수
+const createBase64MarkerIcon = (base64Image: string): string => {
+  // SVG 마커 템플릿
+  const svg = `
+    <svg width="40" height="54" viewBox="0 0 40 54" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <!-- 핀 형태 배경 -->
+      <path fill="#FFFFFF" stroke="#DDDDDD" stroke-width="2" d="M20,2 C9.07,2 0.5,10.57 0.5,21.5 C0.5,34.67 12.99,43.67 20,52 C27.01,43.67 39.5,34.67 39.5,21.5 C39.5,10.57 30.93,2 20,2 Z" />
+      
+      <!-- 클리핑 패스 (이미지를 원형으로 자르기 위함) -->
+      <defs>
+        <clipPath id="circleClip">
+          <circle cx="20" cy="21" r="15" />
+        </clipPath>
+      </defs>
+      
+      <!-- 원형으로 잘린 이미지 -->
+      <image clip-path="url(#circleClip)" x="5" y="6" width="30" height="30" xlink:href="${base64Image}" />
+      
+      <!-- 이미지 테두리 -->
+      <circle cx="20" cy="21" r="15" fill="none" stroke="#FFFFFF" stroke-width="2" />
+    </svg>
+  `;
+
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+};
+
+// 클러스터 마커 생성 함수 (기존 함수 유지)
+const createClusterIcon = (count: number, style: ClusterStyle): string => {
+  // SVG 원형 마커 생성
+  const svg = `
+  <svg width="${style.scale}" height="${style.scale}" viewBox="0 0 ${style.scale} ${style.scale}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="${style.scale / 2}" cy="${style.scale / 2}" r="${style.scale / 2 - 2}" fill="${style.bgColor}" stroke="${style.borderColor}" stroke-width="2"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="${style.fontColor}" 
+          font-family="Arial, sans-serif" font-weight="bold" font-size="${style.fontSize}">
+      ${count}
+    </text>
+  </svg>
+`;
+
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+};
+
+interface ClusterStyle {
+  scale: number;
+  fontColor: string;
+  fontSize: string;
+  bgColor: string;
+  borderColor: string;
+  zIndex: number;
+}
+
 interface GoogleMapComponentProps {
   markers: MapMarker[];
   onZoomChanged?: (newZoom: number) => void;
   onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number }) => void;
-  onCenterChanged?: (center: { lat: number; lng: number }) => void; // 새로운 prop
+  onCenterChanged?: (center: { lat: number; lng: number }) => void;
   initialZoom?: number;
-  initialCenter?: { lat: number; lng: number }; // 새로운 prop
+  initialCenter?: { lat: number; lng: number };
   pathColor?: string;
   height?: string;
 }
@@ -29,7 +100,7 @@ export default function GoogleMapComponent({
   onBoundsChanged,
   onCenterChanged,
   initialZoom = 11,
-  initialCenter, // 새로 추가된 prop
+  initialCenter,
   pathColor = '#FF5353',
   height = '300px',
 }: GoogleMapComponentProps & {
@@ -58,6 +129,9 @@ export default function GoogleMapComponent({
   // 최근에 이벤트가 처리된 시간 저장
   const lastEventTimeRef = useRef<number>(0);
 
+  // 마커 아이콘 Cache 추가
+  const [markerIcons, setMarkerIcons] = useState<{ [key: string]: string }>({});
+
   // 구글 맵 API 로드
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -69,6 +143,36 @@ export default function GoogleMapComponent({
     width: '100%',
     height: height,
   };
+
+  // 마커 아이콘 미리 로드
+  useEffect(() => {
+    const loadMarkerIcons = async () => {
+      if (!markers || markers.length === 0) return;
+
+      const iconsMap: { [key: string]: string } = {};
+
+      for (const marker of markers) {
+        if (marker.profileUrl && !marker.count) {
+          // 이미 로드된 아이콘이 있으면 건너뜁니다
+          if (iconsMap[marker.profileUrl]) continue;
+
+          try {
+            // 이미지를 Base64로 변환
+            const base64Image = await convertImageToBase64(marker.profileUrl);
+
+            // 변환된 Base64 이미지로 마커 아이콘 생성
+            iconsMap[marker.profileUrl] = createBase64MarkerIcon(base64Image);
+          } catch (error) {
+            console.error(`Failed to convert image for marker ${marker.id}:`, error);
+          }
+        }
+      }
+
+      setMarkerIcons(iconsMap);
+    };
+
+    loadMarkerIcons();
+  }, [markers]);
 
   // 컴포넌트 마운트 시 사용자 위치 가져오기
   useEffect(() => {
@@ -123,7 +227,7 @@ export default function GoogleMapComponent({
     }));
 
     // 거리순으로 정렬
-    const sorted = [...markersWithDistance].sort((a, b) => a.distance - b.distance);
+    const sorted = [...markersWithDistance].sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
     // 경로를 그릴 마커 설정 (최대 10개까지만)
     setSortedMarkers(sorted.slice(0, 10));
@@ -209,7 +313,7 @@ export default function GoogleMapComponent({
         }
       }
     });
-  }, [onZoomChanged, onBoundsChanged, initialZoom, currentZoom, throttleEvent]);
+  }, [onZoomChanged, onBoundsChanged, onCenterChanged, initialZoom, currentZoom, throttleEvent]);
 
   // 경로 포인트 생성 (사용자 위치 + 정렬된 마커들)
   const pathPoints = useMemo(() => {
@@ -271,32 +375,6 @@ export default function GoogleMapComponent({
 
             const style = getClusterStyle(marker.count);
 
-            // 클러스터 스타일 타입 정의
-            interface ClusterStyle {
-              scale: number;
-              fontColor: string;
-              fontSize: string;
-              bgColor: string;
-              borderColor: string;
-              zIndex: number;
-            }
-
-            // SVG 원형 클러스터 생성
-            const createClusterIcon = (count: number, style: ClusterStyle) => {
-              // SVG 원형 마커 생성
-              const svg = `
-              <svg width="${style.scale}" height="${style.scale}" viewBox="0 0 ${style.scale} ${style.scale}" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="${style.scale / 2}" cy="${style.scale / 2}" r="${style.scale / 2 - 2}" fill="${style.bgColor}" stroke="${style.borderColor}" stroke-width="2"/>
-                <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="${style.fontColor}" 
-                      font-family="Arial, sans-serif" font-weight="bold" font-size="${style.fontSize}">
-                  ${count}
-                </text>
-              </svg>
-            `;
-
-              return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
-            };
-
             return (
               <Marker
                 key={`cluster-${marker.id}`}
@@ -308,6 +386,18 @@ export default function GoogleMapComponent({
                 }}
                 title={marker.title}
                 zIndex={style.zIndex}
+                onClick={() => {
+                  if (
+                    marker.id &&
+                    typeof marker.id === 'string' &&
+                    marker.id.startsWith('diary_')
+                  ) {
+                    const diaryId = marker.id.replace('diary_', '');
+                    if (!isNaN(Number(diaryId))) {
+                      window.location.href = `/diaries/${diaryId}`;
+                    }
+                  }
+                }}
               />
             );
           }
@@ -315,14 +405,18 @@ export default function GoogleMapComponent({
           // 정렬된 마커 경로에 포함된 마커인지 확인
           const isInPath = sortedMarkers.some(m => m.id === marker.id);
 
+          // Base64로 변환된 아이콘 사용 (없으면 원래 URL 사용)
+          const iconUrl = markerIcons[marker.profileUrl] || marker.profileUrl;
+
           return (
             <Marker
               key={`diary-${marker.id}`}
               position={{ lat: marker.lat, lng: marker.lng }}
               title={marker.title}
               icon={{
-                url: marker.profileUrl,
-                scaledSize: new window.google.maps.Size(30, 30),
+                url: iconUrl,
+                scaledSize: new window.google.maps.Size(40, 54),
+                anchor: new window.google.maps.Point(20, 52),
               }}
               zIndex={isInPath ? 100 : 10}
               onClick={() => {
@@ -336,11 +430,12 @@ export default function GoogleMapComponent({
             />
           );
         } catch (error) {
+          console.error('Marker rendering error:', error);
           return null;
         }
       })
       .filter(Boolean); // null 값 필터링
-  }, [markers, sortedMarkers]);
+  }, [markers, sortedMarkers, markerIcons]);
 
   // 로딩 중일 때
   if (!isLoaded)
