@@ -208,7 +208,7 @@ const DiaryEditPage: FC = () => {
           url: accessUrl, // S3 접근 URL
           orderIndex, // 정렬 순서
         };
-        ㅣ;
+
         newMediaItems.push(mediaItem);
       }
 
