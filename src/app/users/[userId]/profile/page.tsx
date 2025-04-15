@@ -374,14 +374,12 @@ export default function UserProfilePage() {
         .filter(
           diary =>
             // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
-            (diary.location?.latitude !== undefined && diary.location?.longitude !== undefined) ||
-            (diary.lat !== undefined && diary.lng !== undefined) ||
-            (diary.latitude !== undefined && diary.longitude !== undefined)
+            diary.latitude && diary.longitude
         )
         .map(diary => {
           // 최대한 안전하게 좌표 정보 추출
-          const lat = diary.location?.latitude || diary.lat || diary.latitude || 0;
-          const lng = diary.location?.longitude || diary.lng || diary.longitude || 0;
+          const lat = diary.latitude;
+          const lng = diary.longitude;
 
           return {
             id: diary.diaryId,
@@ -398,14 +396,12 @@ export default function UserProfilePage() {
         .filter(
           diary =>
             // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
-            (diary.location?.latitude !== undefined && diary.location?.longitude !== undefined) ||
-            (diary.lat !== undefined && diary.lng !== undefined) ||
-            (diary.latitude !== undefined && diary.longitude !== undefined)
+            diary.location?.latitude && diary.location?.longitude
         )
         .map(diary => {
           // 최대한 안전하게 좌표 정보 추출
-          const lat = diary.location?.latitude || diary.lat || diary.latitude || 0;
-          const lng = diary.location?.longitude || diary.lng || diary.longitude || 0;
+          const lat = diary.location?.latitude;
+          const lng = diary.location?.longitude;
 
           return {
             id: diary.diaryId,

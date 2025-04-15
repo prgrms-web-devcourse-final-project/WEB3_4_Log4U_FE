@@ -441,11 +441,13 @@ function SearchContent() {
                         {/* 위치 정보 */}
                         <div
                           className='truncate max-w-[120px]'
-                          title={`${diary.sido || ''} ${diary.sigungu || ''} ${diary.dongmyun || ''}`}
+                          title={`${diary.location.sido || ''} ${diary.location.sigungu || ''} ${diary.location.eupmyeondong || ''}`}
                         >
-                          {diary.sigungu && diary.dongmyun
-                            ? `${diary.sigungu} ${diary.dongmyun}`
-                            : diary.dongmyun || diary.sigungu || '위치 정보 없음'}
+                          {diary.location.sigungu && diary.location.eupmyeondong
+                            ? `${diary.location.sigungu} ${diary.location.eupmyeondong}`
+                            : diary.location.eupmyeondong ||
+                              diary.location.sigungu ||
+                              '위치 정보 없음'}
                         </div>
                       </div>
                     </div>
