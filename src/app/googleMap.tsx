@@ -1,3 +1,4 @@
+// GoogleMapComponent.tsx
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { ImageUtil } from '@root/utils/image.util';
@@ -44,8 +45,8 @@ interface GoogleMapComponentProps {
   initialZoom?: number;
   initialCenter?: { lat: number; lng: number };
   height?: string;
-  onExpandMap?: () => void; // 새로운 prop - 지도 확장 요청 콜백
-  isExpanded?: boolean; // 새로운 prop - 지도가 확장됐는지 여부
+  onExpandMap?: () => void; // 지도 확장 요청 콜백
+  isExpanded?: boolean; // 지도가 확장됐는지 여부
 }
 
 export default function GoogleMapComponent({
@@ -68,14 +69,16 @@ export default function GoogleMapComponent({
     lng: initialCenter?.lng || 126.978,
   });
 
-  // 현재 중심 좌표를 부모 컴포넌트에 전달
-  const centerChangedRef = useRef(false);
-
-  // 현재 줌 레벨 상태
-  const [currentZoom, setCurrentZoom] = useState(initialZoom);
-
-  // 최근에 이벤트가 처리된 시간 저장
+  // 이벤트 처리 제어 상태와 ref
+  const isMountedRef = useRef(false);
+  const [isMapStable, setIsMapStable] = useState(false);
   const lastEventTimeRef = useRef<number>(0);
+  const lastIdleTimeRef = useRef<number>(0);
+  const lastBoundsUpdateTimeRef = useRef<number>(0);
+  const lastZoomUpdateTimeRef = useRef<number>(0);
+
+  // 최소 이벤트 간격 (ms)
+  const MIN_EVENT_INTERVAL = 500;
 
   // 마커 아이콘 Cache
   const [markerIcons, setMarkerIcons] = useState<{ [key: string]: string }>({});
@@ -84,65 +87,121 @@ export default function GoogleMapComponent({
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY || '',
+    // 필요한 라이브러리 명시
+    libraries: [],
   });
 
-  // 지도 컨테이너 스타일 - 확장 상태에 따라 높이 조절
-  const mapContainerStyle = {
-    width: '100%',
-    height: isExpanded ? 'calc(100vh - 100px)' : height, // 확장 시 화면 거의 전체 사용
-    transition: 'height 0.3s ease', // 부드러운 전환 효과
-  };
+  // 맵 옵션 메모이제이션
+  const mapOptions = useMemo(
+    () => ({
+      disableDefaultUI: true,
+      zoomControl: true,
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }],
+        },
+      ],
+      // 불필요한 이벤트 감소
+      gestureHandling: 'cooperative',
+    }),
+    []
+  );
 
-  // 마커 아이콘 미리 로드
+  // 지도 컨테이너 스타일 메모이제이션
+  const mapContainerStyle = useMemo(
+    () => ({
+      width: '100%',
+      height: isExpanded ? 'calc(100vh - 100px)' : height,
+      transition: 'height 0.3s ease',
+    }),
+    [isExpanded, height]
+  );
+
+  // 마커 아이콘 미리 로드 - 필요한 것만 로드하도록 최적화
   useEffect(() => {
+    // 이미 로드된 프로필 URL 추적
+    const loadedUrls = new Set(Object.keys(markerIcons));
+
+    // 다이어리 마커만 필터링 (클러스터 마커 제외)
+    const diaryMarkers = markers.filter(marker => !marker.count);
+
+    // 로드해야 할 새 URL 목록 (아직 로드되지 않은 것만)
+    const newUrls = diaryMarkers
+      .filter(marker => marker.profileUrl && !loadedUrls.has(marker.profileUrl))
+      .map(marker => marker.profileUrl);
+
+    // 새로운 URL이 없으면 건너뜀
+    if (newUrls.length === 0) return;
+
+    let isMounted = true;
+
     const loadMarkerIcons = async () => {
-      if (!markers || markers.length === 0) return;
+      const iconsMap = { ...markerIcons };
 
-      const iconsMap: { [key: string]: string } = {};
+      // 최대 5개씩만 병렬 처리 (성능 최적화)
+      const batchSize = 5;
+      for (let i = 0; i < newUrls.length; i += batchSize) {
+        const batch = newUrls.slice(i, i + batchSize);
 
-      for (const marker of markers) {
-        if (marker.profileUrl && !marker.count) {
-          // 이미 로드된 아이콘이 있으면 건너뜁니다
-          if (iconsMap[marker.profileUrl]) continue;
+        await Promise.all(
+          batch.map(async url => {
+            try {
+              const base64Image = await ImageUtil.convertImageToBase64(url);
+              iconsMap[url] = ImageUtil.createBase64MarkerIcon(base64Image);
+            } catch (error) {
+              console.error(`Failed to convert image:`, error);
+            }
+          })
+        );
 
-          try {
-            // 이미지를 Base64로 변환
-            const base64Image = await ImageUtil.convertImageToBase64(marker.profileUrl);
-
-            // 변환된 Base64 이미지로 마커 아이콘 생성
-            iconsMap[marker.profileUrl] = ImageUtil.createBase64MarkerIcon(base64Image);
-          } catch (error) {
-            console.error(`Failed to convert image for marker ${marker.id}:`, error);
-          }
-        }
+        // 컴포넌트가 언마운트되었으면 중단
+        if (!isMounted) return;
       }
 
-      setMarkerIcons(iconsMap);
+      if (isMounted) {
+        setMarkerIcons(iconsMap);
+      }
     };
 
     loadMarkerIcons();
-  }, [markers]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [markers, markerIcons]);
 
   // 지도 확장 시 맵 리사이즈 트리거
   useEffect(() => {
-    if (isExpanded && mapRef.current) {
-      // 지도 크기 변경 후 지도 레이아웃 재조정 (필수)
-      window.google?.maps?.event?.trigger(mapRef.current, 'resize');
+    if (mapRef.current && isMountedRef.current) {
+      // 지도 크기 변경 후 지도 레이아웃 재조정
+      const resizeTimer = setTimeout(() => {
+        if (mapRef.current) {
+          window.google?.maps?.event?.trigger(mapRef.current, 'resize');
 
-      // 경계 정보 다시 가져오기
-      if (onBoundsChanged && mapRef.current) {
-        const bounds = mapRef.current.getBounds();
-        if (bounds) {
-          const ne = bounds.getNorthEast();
-          const sw = bounds.getSouthWest();
-          onBoundsChanged({
-            north: ne.lat(),
-            east: ne.lng(),
-            south: sw.lat(),
-            west: sw.lng(),
-          });
+          // 경계 정보 다시 가져오기
+          const boundsTimer = setTimeout(() => {
+            if (mapRef.current && onBoundsChanged) {
+              const bounds = mapRef.current.getBounds();
+              if (bounds) {
+                const ne = bounds.getNorthEast();
+                const sw = bounds.getSouthWest();
+                onBoundsChanged({
+                  north: ne.lat(),
+                  east: ne.lng(),
+                  south: sw.lat(),
+                  west: sw.lng(),
+                });
+              }
+            }
+          }, 300);
+
+          return () => clearTimeout(boundsTimer);
         }
-      }
+      }, 300);
+
+      return () => clearTimeout(resizeTimer);
     }
   }, [isExpanded, onBoundsChanged]);
 
@@ -151,20 +210,30 @@ export default function GoogleMapComponent({
     (map: google.maps.Map) => {
       mapRef.current = map;
 
-      // 맵이 로드된 직후에 초기 바운드 정보 전달
-      if (onBoundsChanged && map.getBounds()) {
-        const bounds = map.getBounds();
-        if (bounds) {
-          const ne = bounds.getNorthEast();
-          const sw = bounds.getSouthWest();
-          onBoundsChanged({
-            north: ne.lat(),
-            east: ne.lng(),
-            south: sw.lat(),
-            west: sw.lng(),
-          });
-        }
-      }
+      // 맵이 준비되었음을 표시
+      setTimeout(() => {
+        isMountedRef.current = true;
+
+        // 맵이 로드된 후 초기 바운드 정보를 지연 전달
+        setTimeout(() => {
+          if (onBoundsChanged && map.getBounds()) {
+            const bounds = map.getBounds();
+            if (bounds) {
+              const ne = bounds.getNorthEast();
+              const sw = bounds.getSouthWest();
+              onBoundsChanged({
+                north: ne.lat(),
+                east: ne.lng(),
+                south: sw.lat(),
+                west: sw.lng(),
+              });
+            }
+          }
+
+          // 맵이 안정화되었음을 표시
+          setIsMapStable(true);
+        }, 500);
+      }, 200);
     },
     [onBoundsChanged]
   );
@@ -172,51 +241,70 @@ export default function GoogleMapComponent({
   // 이벤트 스로틀링 함수
   const throttleEvent = useCallback((callback: () => void) => {
     const now = Date.now();
-    // 마지막 이벤트로부터 300ms 이상 지났을 때만 처리
-    if (now - lastEventTimeRef.current > 300) {
+    if (now - lastEventTimeRef.current > MIN_EVENT_INTERVAL) {
       lastEventTimeRef.current = now;
       callback();
     }
   }, []);
 
+  // 줌 변경 처리 - 스로틀링 적용
+  const handleZoomChanged = useCallback(() => {
+    if (!mapRef.current || !isMapStable || !onZoomChanged) return;
+
+    const now = Date.now();
+    if (now - lastZoomUpdateTimeRef.current < MIN_EVENT_INTERVAL) return;
+    lastZoomUpdateTimeRef.current = now;
+
+    const newZoom = mapRef.current.getZoom() || initialZoom;
+    const intZoom = Math.floor(newZoom);
+
+    onZoomChanged(intZoom);
+  }, [initialZoom, isMapStable, onZoomChanged]);
+
   // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때)
   const handleIdle = useCallback(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMapStable) return;
+
+    // 너무 빠른 연속 호출 방지
+    const now = Date.now();
+    if (now - lastIdleTimeRef.current < MIN_EVENT_INTERVAL) return;
+    lastIdleTimeRef.current = now;
 
     throttleEvent(() => {
+      if (!mapRef.current) return;
+
       // 중심 좌표 업데이트
-      const newCenter = mapRef.current?.getCenter();
-      if (newCenter) {
+      const newCenter = mapRef.current.getCenter();
+      if (newCenter && onCenterChanged) {
         const updatedCenter = {
           lat: newCenter.lat(),
           lng: newCenter.lng(),
         };
-        setCenter(updatedCenter);
 
-        // 첫 로드 이후에만 중심 변경 이벤트 발생
-        if (centerChangedRef.current && onCenterChanged) {
+        // 이전 중심점과 새 중심점이 너무 가까우면 업데이트 하지 않음
+        if (
+          Math.abs(updatedCenter.lat - center.lat) > 0.001 ||
+          Math.abs(updatedCenter.lng - center.lng) > 0.001
+        ) {
+          setCenter(updatedCenter);
           onCenterChanged(updatedCenter);
-        } else {
-          centerChangedRef.current = true;
         }
       }
 
-      // 줌 레벨 정보 전달 - 줌 레벨이 변경된 경우에만
-      if (onZoomChanged) {
-        const newZoom = mapRef.current?.getZoom() || initialZoom;
-        // 정수 부분만 비교하여 실질적인 변경 시에만 업데이트
-        if (Math.floor(newZoom) !== Math.floor(currentZoom)) {
-          setCurrentZoom(newZoom); // 현재 줌 레벨 업데이트
-          onZoomChanged(newZoom);
-        }
-      }
+      // 줌 레벨 변경 확인
+      handleZoomChanged();
 
       // 맵 경계 정보 전달
       if (onBoundsChanged && mapRef.current) {
+        const now = Date.now();
+        if (now - lastBoundsUpdateTimeRef.current < MIN_EVENT_INTERVAL) return;
+        lastBoundsUpdateTimeRef.current = now;
+
         const bounds = mapRef.current.getBounds();
         if (bounds) {
           const ne = bounds.getNorthEast();
           const sw = bounds.getSouthWest();
+
           onBoundsChanged({
             north: ne.lat(),
             east: ne.lng(),
@@ -226,13 +314,7 @@ export default function GoogleMapComponent({
         }
       }
     });
-  }, [onZoomChanged, onBoundsChanged, onCenterChanged, initialZoom, currentZoom, throttleEvent]);
-
-  // 지도 클릭 핸들러 - 확장 상태 토글
-  const handleMapClick = useCallback(() => {
-    // 확장 버튼과 겹치지 않도록 지도 클릭 시 확장은 미사용
-    // 대신 전용 버튼을 사용
-  }, []);
+  }, [onBoundsChanged, onCenterChanged, throttleEvent, handleZoomChanged, isMapStable, center]);
 
   // 마커 렌더링
   const renderedMarkers = useMemo(() => {
@@ -284,6 +366,16 @@ export default function GoogleMapComponent({
 
             const style = getClusterStyle(marker.count);
 
+            // 클러스터 마커 클릭 핸들러를 메모이제이션
+            const handleClusterClick = () => {
+              if (marker.id && typeof marker.id === 'string' && marker.id.startsWith('diary_')) {
+                const diaryId = marker.id.replace('diary_', '');
+                if (!isNaN(Number(diaryId))) {
+                  window.location.href = `/diaries/${diaryId}`;
+                }
+              }
+            };
+
             return (
               <Marker
                 key={`cluster-${marker.id}`}
@@ -295,24 +387,18 @@ export default function GoogleMapComponent({
                 }}
                 title={marker.title}
                 zIndex={style.zIndex}
-                onClick={() => {
-                  if (
-                    marker.id &&
-                    typeof marker.id === 'string' &&
-                    marker.id.startsWith('diary_')
-                  ) {
-                    const diaryId = marker.id.replace('diary_', '');
-                    if (!isNaN(Number(diaryId))) {
-                      window.location.href = `/diaries/${diaryId}`;
-                    }
-                  }
-                }}
+                onClick={handleClusterClick}
               />
             );
           }
 
           // Base64로 변환된 아이콘 사용 (없으면 원래 URL 사용)
           const iconUrl = markerIcons[marker.profileUrl] || marker.profileUrl;
+
+          // 다이어리 마커 클릭 핸들러를 메모이제이션
+          const handleDiaryClick = () => {
+            window.location.href = `/diaries/${marker.id}`;
+          };
 
           return (
             <Marker
@@ -324,11 +410,8 @@ export default function GoogleMapComponent({
                 scaledSize: new window.google.maps.Size(40, 54),
                 anchor: new window.google.maps.Point(20, 52),
               }}
-              clickable={true}
               zIndex={10}
-              onClick={() => {
-                window.location.href = `/diaries/${marker.id}`;
-              }}
+              onClick={handleDiaryClick}
             />
           );
         } catch (error) {
@@ -355,63 +438,54 @@ export default function GoogleMapComponent({
         zoom={initialZoom}
         onLoad={handleMapLoad}
         onIdle={handleIdle}
-        onClick={handleMapClick}
-        options={{
-          disableDefaultUI: true,
-          zoomControl: true,
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }],
-            },
-          ],
-        }}
+        options={mapOptions}
       >
         {/* 마커들 렌더링 */}
         {renderedMarkers}
       </GoogleMap>
 
       {/* 확장 버튼 - 우측 상단에 배치 */}
-      <button
-        onClick={onExpandMap}
-        className='absolute top-2 right-2 bg-white p-2 rounded-full shadow-md z-10 hover:bg-gray-100 transition-colors'
-        title={isExpanded ? '지도 축소' : '지도 확장'}
-      >
-        {isExpanded ? (
-          // 축소 아이콘
-          <svg
-            xmlns='http://www.w3.org/2000/svg'
-            className='h-5 w-5'
-            fill='none'
-            viewBox='0 0 24 24'
-            stroke='currentColor'
-          >
-            <path
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth={2}
-              d='M6 18L18 6M6 6l12 12'
-            />
-          </svg>
-        ) : (
-          // 확장 아이콘
-          <svg
-            xmlns='http://www.w3.org/2000/svg'
-            className='h-5 w-5'
-            fill='none'
-            viewBox='0 0 24 24'
-            stroke='currentColor'
-          >
-            <path
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth={2}
-              d='M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5'
-            />
-          </svg>
-        )}
-      </button>
+      {onExpandMap && (
+        <button
+          onClick={onExpandMap}
+          className='absolute top-2 right-2 bg-white p-2 rounded-full shadow-md z-10 hover:bg-gray-100 transition-colors'
+          title={isExpanded ? '지도 축소' : '지도 확장'}
+        >
+          {isExpanded ? (
+            // 축소 아이콘
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              className='h-5 w-5'
+              fill='none'
+              viewBox='0 0 24 24'
+              stroke='currentColor'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M6 18L18 6M6 6l12 12'
+              />
+            </svg>
+          ) : (
+            // 확장 아이콘
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              className='h-5 w-5'
+              fill='none'
+              viewBox='0 0 24 24'
+              stroke='currentColor'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5'
+              />
+            </svg>
+          )}
+        </button>
+      )}
     </div>
   );
 }
