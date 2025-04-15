@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { FollowService } from '@root/services/follow';
 import { User } from '@root/types/user';
+import { useRouter } from 'next/navigation';
 
 // 팔로워/팔로잉 모달 컴포넌트
 interface FollowModalProps {
@@ -20,11 +21,18 @@ const FollowModal: React.FC<FollowModalProps> = ({
   isFollowers,
   onUnfollow,
 }) => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [follows, setFollows] = useState<User.IFollowSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [unfollowLoading, setUnfollowLoading] = useState<{ [key: string]: boolean }>({});
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // 프로필 페이지로 이동
+  const navigateToProfile = (userId: number) => {
+    onClose(); // 모달 닫기
+    router.push(`/users/${userId}/profile`);
+  };
 
   useEffect(() => {
     const fetchFollows = async () => {
@@ -174,10 +182,13 @@ const FollowModal: React.FC<FollowModalProps> = ({
             <ul className='divide-y' style={{ borderColor: 'var(--color-secondary)' }}>
               {filteredFollows.map(follow => (
                 <li key={follow.userId} className='px-4 py-3 flex items-center justify-between'>
-                  <div className='flex items-center'>
+                  <div
+                    className='flex items-center cursor-pointer hover:opacity-80'
+                    onClick={() => navigateToProfile(follow.userId)}
+                  >
                     <div className='w-12 h-12 rounded-full overflow-hidden'>
                       <img
-                        src={follow.thumbNail || '/public/test-profile.svg'}
+                        src={follow.thumbNail || '/test-profile.svg'}
                         alt={`${follow.nickname}의 프로필`}
                         className='w-full h-full object-cover'
                       />
@@ -190,7 +201,10 @@ const FollowModal: React.FC<FollowModalProps> = ({
                   </div>
                   {!isFollowers && (
                     <button
-                      onClick={() => handleUnfollow(follow.nickname)}
+                      onClick={e => {
+                        e.stopPropagation(); // 프로필 클릭 이벤트 전파 방지
+                        handleUnfollow(follow.nickname);
+                      }}
                       disabled={unfollowLoading[follow.nickname]}
                       className='ml-2 hover:opacity-80'
                       style={{ color: 'var(--color-accent)' }}
