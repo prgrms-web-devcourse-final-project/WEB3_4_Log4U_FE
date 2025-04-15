@@ -4,7 +4,7 @@ export namespace ImageUtil {
   }
 
   // 이미지 URL을 Base64로 변환하는 함수
-  export const convertImageToBase64 = async (imageUrl: string) => {
+  export const convertImageToBase64 = async (imageUrl: string): Promise<string> => {
     try {
       // 이미지를 가져옵니다
       const response = await fetch(imageUrl);
@@ -13,7 +13,7 @@ export namespace ImageUtil {
       // Blob을 Base64로 변환
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
+        reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
@@ -25,7 +25,7 @@ export namespace ImageUtil {
   };
 
   // Base64 이미지를 사용한 커스텀 마커 생성 함수
-  export const createBase64MarkerIcon = (base64Image: string) => {
+  export const createBase64MarkerIcon = (base64Image: string): string => {
     // SVG 마커 템플릿
     const svg = `
     <svg width="40" height="54" viewBox="0 0 40 54" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -45,7 +45,7 @@ export namespace ImageUtil {
       <!-- 이미지 테두리 -->
       <circle cx="20" cy="21" r="15" fill="none" stroke="#FFFFFF" stroke-width="2" />
     </svg>
-    `;
+  `;
 
     return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
   };
