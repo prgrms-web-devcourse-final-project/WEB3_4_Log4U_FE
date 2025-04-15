@@ -20,10 +20,10 @@ export class UserService {
     }
   }
 
-  static async getUser(nickname: string): Promise<User.IDetail> {
+  static async getUser(userId: number): Promise<User.IDetail> {
     try {
       const { data } = await axiosInstance.request<User.IDetail>({
-        url: `/users/${nickname}`,
+        url: `/users/${userId}`,
         method: 'GET',
       });
 
@@ -33,6 +33,7 @@ export class UserService {
       throw error;
     }
   }
+
   static async getUserList(
     query: User.GetListQueryDto
   ): Promise<Pagination.ICursor<User.ISummary>> {

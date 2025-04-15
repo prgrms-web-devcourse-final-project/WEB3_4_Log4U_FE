@@ -108,7 +108,7 @@ const EmptyDiaryCard = ({ index }: { index: number }) => (
 export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const nickname = params.nickname as string;
+  const userId = params.userId as string;
 
   const [profile, setProfile] = useState<User.IDetail | null>(null);
   const [diaries, setDiaries] = useState<Diary.Summary[]>([]);
@@ -166,15 +166,15 @@ export default function UserProfilePage() {
 
   // 유저 정보 및 다이어리 불러오기
   const loadUserData = useCallback(async () => {
-    if (!nickname) return;
+    if (!userId) return;
 
     setLoading(true);
     try {
       // 현재 로그인한 사용자 정보 가져오기
       const meData = await UserService.getMe();
 
-      // 프로필 사용자 정보 가져오기
-      const userData = await UserService.getUser(nickname);
+      // 프로필 사용자 정보 가져오기 (userId 기반으로 변경)
+      const userData = await UserService.getUser(parseInt(userId));
       setProfile(userData);
 
       // 자신의 프로필인지 확인
@@ -204,7 +204,7 @@ export default function UserProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [nickname, router]);
+  }, [userId, router]);
 
   // 팔로우/언팔로우 처리
   const handleToggleFollow = async () => {

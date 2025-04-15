@@ -732,7 +732,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
           {/* 헤더 */}
           <div className='p-4 border-b flex items-center justify-between'>
             <div className='flex items-center'>
-              <Link href={`/users/${diary.authorNickname}/profile`} className='flex items-center'>
+              <Link href={`/users/${diary.authorId}/profile`} className='flex items-center'>
                 <div className='w-10 h-10 rounded-full overflow-hidden mr-3 bg-gray-200'>
                   <img
                     src={diary.authorProfileImage}
