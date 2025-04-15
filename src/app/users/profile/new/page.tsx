@@ -18,6 +18,7 @@ export default function ProfileSetupPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // 유효성 검사 상태
   const [nicknameError, setNicknameError] = useState('');
@@ -26,6 +27,30 @@ export default function ProfileSetupPage() {
 
   // 파일 입력 참조
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 컴포넌트 마운트 시 사용자 프로필 확인
+  useEffect(() => {
+    const checkUserProfile = async () => {
+      try {
+        setIsLoading(true);
+        const userData = await UserService.getMe();
+
+        // 프로필이 이미 설정되어 있는지 확인
+        if (userData && userData.nickname && userData.profileImage) {
+          console.log('프로필이 이미 설정되어 있음:', userData.nickname);
+          // 홈으로 리다이렉트
+          router.push('/');
+        }
+      } catch (error) {
+        console.error('사용자 정보 확인 중 오류 발생:', error);
+        // 오류가 발생해도 프로필 설정 페이지에 머무름
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkUserProfile();
+  }, [router]);
 
   // 중복 닉네임 체크 함수
   const checkNickname = async () => {
@@ -169,9 +194,27 @@ export default function ProfileSetupPage() {
 
       console.log('프로필 생성 성공!');
 
-      // 프로필 생성 완료 후 홈으로 이동
-      alert('프로필 설정이 완료되었습니다!');
-      router.push('/');
+      // 프로필 생성 완료 후 사용자 정보 재확인
+      try {
+        console.log('사용자 정보 확인 중...');
+        const userData = await UserService.getMe();
+
+        // 프로필 정보가 실제로 설정되었는지 확인
+        if (userData && userData.nickname && userData.profileImage) {
+          console.log('프로필 설정 확인됨:', userData.nickname, userData.profileImage);
+          alert('프로필 설정이 완료되었습니다!');
+          router.push('/');
+        } else {
+          console.log('프로필 정보가 서버에 반영되지 않음:', userData);
+          alert(
+            '프로필 설정은 완료되었으나 서버 반영에 시간이 걸릴 수 있습니다. 잠시 후 다시 시도해주세요.'
+          );
+        }
+      } catch (verifyError) {
+        console.error('사용자 정보 확인 중 오류 발생:', verifyError);
+        alert('프로필 설정이 완료되었습니다! 홈으로 이동합니다.');
+        router.push('/');
+      }
     } catch (error) {
       console.error('프로필 생성 중 오류 발생:', error);
       alert('프로필 생성에 실패했습니다. 다시 시도해주세요.');
@@ -187,6 +230,21 @@ export default function ProfileSetupPage() {
       setNicknameError('');
     }
   }, [nickname]);
+
+  // 로딩 중일 때 표시할 UI
+  if (isLoading) {
+    return (
+      <div
+        className='min-h-screen flex justify-center items-center py-12 px-4 sm:px-6 lg:px-8'
+        style={{ backgroundColor: 'var(--color-neutral)' }}
+      >
+        <div
+          className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2'
+          style={{ borderColor: 'var(--color-primary)' }}
+        ></div>
+      </div>
+    );
+  }
 
   return (
     <div
