@@ -13,7 +13,7 @@ const UserItem = ({ user }: UserItemProps) => {
   const router = useRouter();
 
   const handleProfileClick = () => {
-    router.push(`/users/${user.nickname}/profile`);
+    router.push(`/users/${user.userId}/profile`);
   };
 
   return (

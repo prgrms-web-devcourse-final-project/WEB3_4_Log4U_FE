@@ -211,7 +211,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       assert(diary, '다이어리가 존재하지 않습니다.');
       await DiaryService.deleteDiary(diary.diaryId);
 
-      router.push('/diaries');
+      router.push('/');
     } catch (err) {
       console.error('다이어리 삭제 중 오류 발생:', err);
       const errorMsg = '다이어리를 삭제하는 중 오류가 발생했습니다.';
