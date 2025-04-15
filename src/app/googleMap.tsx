@@ -1,4 +1,4 @@
-import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { ImageUtil } from '@root/utils/image.util';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -43,7 +43,6 @@ interface GoogleMapComponentProps {
   onCenterChanged?: (center: { lat: number; lng: number }) => void;
   initialZoom?: number;
   initialCenter?: { lat: number; lng: number };
-  pathColor?: string;
   height?: string;
 }
 
@@ -54,7 +53,6 @@ export default function GoogleMapComponent({
   onCenterChanged,
   initialZoom = 11,
   initialCenter,
-  pathColor = '#FF5353',
   height = '300px',
 }: GoogleMapComponentProps & {
   initialCenter?: { lat: number; lng: number };
@@ -73,10 +71,6 @@ export default function GoogleMapComponent({
   // 현재 중심 좌표를 부모 컴포넌트에 전달
   const centerChangedRef = useRef(false);
 
-  // 사용자 위치 상태 추가
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  // 경로 표시용 정렬된 마커 배열
-  const [sortedMarkers, setSortedMarkers] = useState<(MapMarker & { distance?: number })[]>([]);
   // 현재 줌 레벨 상태 추가
   const [currentZoom, setCurrentZoom] = useState(initialZoom);
   // 최근에 이벤트가 처리된 시간 저장
@@ -127,65 +121,6 @@ export default function GoogleMapComponent({
     loadMarkerIcons();
   }, [markers]);
 
-  // 컴포넌트 마운트 시 사용자 위치 가져오기
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-        },
-        error => {
-          console.error('위치 정보를 가져오는데 실패했습니다:', error);
-        },
-        { enableHighAccuracy: true }
-      );
-    }
-  }, []);
-
-  // 마커들을 현재 위치에서 가까운 순서대로 정렬
-  useEffect(() => {
-    if (!userLocation || !markers || markers.length === 0) {
-      setSortedMarkers([]);
-      return;
-    }
-
-    // 다이어리 마커만 필터링 (클러스터가 아닌 마커)
-    const diaryMarkers = markers.filter(marker => !marker.count);
-    if (diaryMarkers.length === 0) {
-      setSortedMarkers([]);
-      return;
-    }
-
-    // 거리 계산 함수 (하버사인 공식)
-    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-      const R = 6371; // 지구 반지름 (km)
-      const dLat = (lat2 - lat1) * (Math.PI / 180);
-      const dLng = (lng2 - lng1) * (Math.PI / 180);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) *
-          Math.cos(lat2 * (Math.PI / 180)) *
-          Math.sin(dLng / 2) *
-          Math.sin(dLng / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distance = R * c;
-      return distance;
-    };
-
-    // 현재 위치에서 각 마커까지의 거리 계산
-    const markersWithDistance = diaryMarkers.map(marker => ({
-      ...marker,
-      distance: calculateDistance(userLocation.lat, userLocation.lng, marker.lat, marker.lng),
-    }));
-
-    // 거리순으로 정렬
-    const sorted = [...markersWithDistance].sort((a, b) => (a.distance || 0) - (b.distance || 0));
-
-    // 경로를 그릴 마커 설정 (최대 10개까지만)
-    setSortedMarkers(sorted.slice(0, 10));
-  }, [markers, userLocation]);
-
   // 맵 로드 완료 핸들러
   const handleMapLoad = useCallback(
     (map: google.maps.Map) => {
@@ -210,7 +145,7 @@ export default function GoogleMapComponent({
   );
 
   // 이벤트 스로틀링 함수
-  const throttleEvent = useCallback((callback: Function) => {
+  const throttleEvent = useCallback((callback: () => void) => {
     const now = Date.now();
     // 마지막 이벤트로부터 300ms 이상 지났을 때만 처리
     if (now - lastEventTimeRef.current > 300) {
@@ -267,16 +202,6 @@ export default function GoogleMapComponent({
       }
     });
   }, [onZoomChanged, onBoundsChanged, onCenterChanged, initialZoom, currentZoom, throttleEvent]);
-
-  // 경로 포인트 생성 (사용자 위치 + 정렬된 마커들)
-  const pathPoints = useMemo(() => {
-    return userLocation && sortedMarkers.length > 0
-      ? [
-          userLocation, // 시작점 (사용자 위치)
-          ...sortedMarkers.map(marker => ({ lat: marker.lat, lng: marker.lng })), // 가까운 마커들
-        ]
-      : [];
-  }, [userLocation, sortedMarkers]);
 
   // 마커 렌더링 - 렌더링마다 불필요한 로그 제거
   const renderedMarkers = useMemo(() => {
@@ -355,9 +280,6 @@ export default function GoogleMapComponent({
             );
           }
 
-          // 정렬된 마커 경로에 포함된 마커인지 확인
-          const isInPath = sortedMarkers.some(m => m.id === marker.id);
-
           // Base64로 변환된 아이콘 사용 (없으면 원래 URL 사용)
           const iconUrl = markerIcons[marker.profileUrl] || marker.profileUrl;
 
@@ -372,7 +294,7 @@ export default function GoogleMapComponent({
                 anchor: new window.google.maps.Point(20, 52),
               }}
               clickable={true}
-              zIndex={isInPath ? 100 : 10}
+              zIndex={10}
               onClick={() => {
                 window.location.href = `/diaries/${marker.id}`;
               }}
@@ -384,7 +306,7 @@ export default function GoogleMapComponent({
         }
       })
       .filter(Boolean); // null 값 필터링
-  }, [markers, sortedMarkers, markerIcons]);
+  }, [markers, markerIcons]);
 
   // 로딩 중일 때
   if (!isLoaded)
@@ -416,37 +338,6 @@ export default function GoogleMapComponent({
       >
         {/* 마커들 렌더링 - 함수 호출 대신 메모이제이션된 값 사용 */}
         {renderedMarkers}
-
-        {/* 사용자 위치 마커 (있을 경우) */}
-        {userLocation && (
-          <Marker
-            position={userLocation}
-            title='내 위치'
-            zIndex={1000} // 가장 위에 표시
-          />
-        )}
-
-        {/* 가까운 마커들을 연결하는 경로 (클러스터링 사용 시 표시하지 않음) */}
-        {pathPoints.length > 1 && !markers.some(marker => marker.count !== undefined) && (
-          <Polyline
-            path={pathPoints}
-            options={{
-              strokeColor: pathColor,
-              strokeOpacity: 0.8,
-              strokeWeight: 3,
-              icons: [
-                {
-                  icon: {
-                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                    scale: 3,
-                  },
-                  offset: '0',
-                  repeat: '100px',
-                },
-              ],
-            }}
-          />
-        )}
       </GoogleMap>
     </div>
   );
