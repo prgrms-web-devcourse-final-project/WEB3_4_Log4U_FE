@@ -365,7 +365,7 @@ export default function HomePage() {
     if (zoomLevel <= 13) {
       // 클러스터 데이터 마커
       return clusterData.map(cluster => ({
-        id: cluster.areaId,
+        id: `cluster_${cluster.areaId}`, // 고유한 ID 생성: 'cluster_' 접두사 추가
         lat: cluster.lat,
         lng: cluster.lon,
         profileUrl: '/hot-logger.png', // 클러스터 아이콘
@@ -375,7 +375,7 @@ export default function HomePage() {
     } else {
       // 다이어리 마커
       return mapDiaries.map(diary => ({
-        id: diary.diaryId,
+        id: `diary_${diary.diaryId}`, // 고유한 ID 생성: 'diary_' 접두사 추가
         lat: diary.latitude,
         lng: diary.longitude,
         profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',

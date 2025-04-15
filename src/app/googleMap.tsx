@@ -4,7 +4,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 
 interface MapMarker {
-  id: number;
+  id: string | number;
   lat: number;
   lng: number;
   profileUrl: string;
