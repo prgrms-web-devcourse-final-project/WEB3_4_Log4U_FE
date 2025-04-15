@@ -39,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps) {
           });
         }
 
-        // 302 상태코드 해결되기 전까지 주석유지
+        // 프로필 설정 없을경우 프로필 생성 페이지 랜딩
         if (!response.data.profileImage || !response.data.nickname) {
           router.push('/users/profile/new');
         }
