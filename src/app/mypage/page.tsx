@@ -190,9 +190,11 @@ export default function MyPage() {
             <h1 className='text-3xl font-bold'>{user?.name || 'User'}</h1>
             <p className='text-gray-700'>@{user?.nickname || 'username'}</p>
           </div>
-          <button className='ml-auto mb-4 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-opacity-90 transition'>
-            프로필 편집
-          </button>
+          <Link href='/users/profile/edit'>
+            <button className='ml-auto mb-4 px-4 py-2 text-white rounded-lg hover:bg-opacity-90 transition'>
+              프로필 편집
+            </button>
+          </Link>
         </div>
       </div>
 
