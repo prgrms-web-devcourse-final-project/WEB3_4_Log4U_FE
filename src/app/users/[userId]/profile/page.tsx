@@ -70,38 +70,63 @@ const DiaryCard = ({ diary }: { diary: Diary.Summary }) => (
         {/* 위치 정보 - 일반 다이어리 카드 */}
         <div
           className='truncate max-w-[120px]'
-          title={`${diary.sido || ''} ${diary.sigungu || ''} ${diary.dongmyun || ''}`}
+          title={
+            diary.location
+              ? `${diary.location.sido || ''} ${diary.location.sigungu || ''} ${diary.location.eupmyeondong || ''}`
+              : '위치 정보 없음'
+          }
         >
-          {diary.sigungu && diary.dongmyun
-            ? `${diary.sigungu} ${diary.dongmyun}`
-            : diary.dongmyun || diary.sigungu || '위치 정보 없음'}
+          {diary.location
+            ? diary.location.sigungu && diary.location.eupmyeondong
+              ? `${diary.location.sigungu} ${diary.location.eupmyeondong}`
+              : diary.location.eupmyeondong || diary.location.sigungu || '위치 정보 없음'
+            : '위치 정보 없음'}
         </div>
       </div>
     </div>
   </Link>
 );
 
-// 빈 다이어리 카드 컴포넌트
-const EmptyDiaryCard = ({ index }: { index: number }) => (
-  <div
-    key={`empty-${index}`}
-    className='block border rounded-lg overflow-hidden hover:shadow-md transition h-full'
-  >
-    <div className='h-52 bg-gray-100'></div>
-    <div className='p-3 text-sm'>
-      {/* 다이어리 제목 */}
-      <h3 className='font-bold text-gray-300 truncate'>제목 없음</h3>
-
-      <div className='flex items-center justify-between mt-2 text-xs text-gray-300'>
-        {/* 작성자 정보 */}
-        <div className='flex items-center'>
-          <span className='truncate max-w-[120px]'>작성자 정보 없음</span>
-        </div>
-
-        {/* 위치 정보 - 빈 다이어리 카드 */}
-        <div className='truncate max-w-[120px]'>위치 정보 없음</div>
-      </div>
+// 빈 상태 컴포넌트
+const EmptyState = ({ isMyself, profileName }: { isMyself: boolean; profileName: string }) => (
+  <div className='col-span-3 flex flex-col items-center justify-center py-12 px-4'>
+    <div className='bg-[#f5f0e6] rounded-full w-32 h-32 flex items-center justify-center mb-6'>
+      <svg
+        className='w-16 h-16 text-[#6c584c]'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+        viewBox='0 0 24 24'
+        stroke='currentColor'
+      >
+        <path
+          strokeLinecap='round'
+          strokeLinejoin='round'
+          strokeWidth={1.5}
+          d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
+        />
+      </svg>
     </div>
+    <h3 className='text-xl font-bold text-[#3c3c3c] mb-2'>
+      {isMyself ? '아직 작성한 다이어리가 없어요' : `${profileName}님이 작성한 다이어리가 없어요`}
+    </h3>
+    <p className='text-[#6c584c] text-center max-w-md mb-6'>
+      {isMyself
+        ? '첫 번째 다이어리를 작성하고 특별한 순간을 기록해보세요. 위치 정보와 함께 당신의 추억을 지도에 남겨보세요.'
+        : `${profileName}님이 아직 다이어리를 작성하지 않았어요. 나중에 다시 확인해보세요.`}
+    </p>
+    {isMyself && (
+      <Link
+        href='/diaries/new'
+        className='px-6 py-3 bg-gradient-to-r from-[#6c584c] to-[#a4161a] text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg'
+      >
+        <div className='flex items-center'>
+          <svg className='w-5 h-5 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
+          </svg>
+          새 다이어리 작성하기
+        </div>
+      </Link>
+    )}
   </div>
 );
 
@@ -345,23 +370,51 @@ export default function UserProfilePage() {
       setMapMarkers(markers);
     } else if (zoomLevel > 13 && mapDiaries.length > 0) {
       // 다이어리 마커
-      const markers = mapDiaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
+      const markers = mapDiaries
+        .filter(
+          diary =>
+            // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
+            (diary.location?.latitude !== undefined && diary.location?.longitude !== undefined) ||
+            (diary.lat !== undefined && diary.lng !== undefined) ||
+            (diary.latitude !== undefined && diary.longitude !== undefined)
+        )
+        .map(diary => {
+          // 최대한 안전하게 좌표 정보 추출
+          const lat = diary.location?.latitude || diary.lat || diary.latitude || 0;
+          const lng = diary.location?.longitude || diary.lng || diary.longitude || 0;
+
+          return {
+            id: diary.diaryId,
+            lat,
+            lng,
+            profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+            title: diary.title,
+          };
+        });
       setMapMarkers(markers);
     } else {
       // 검색 결과에서의 마커 (백업)
-      const markers = diaries.map(diary => ({
-        id: diary.diaryId,
-        lat: diary.latitude,
-        lng: diary.longitude,
-        profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-        title: diary.title,
-      }));
+      const markers = diaries
+        .filter(
+          diary =>
+            // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
+            (diary.location?.latitude !== undefined && diary.location?.longitude !== undefined) ||
+            (diary.lat !== undefined && diary.lng !== undefined) ||
+            (diary.latitude !== undefined && diary.longitude !== undefined)
+        )
+        .map(diary => {
+          // 최대한 안전하게 좌표 정보 추출
+          const lat = diary.location?.latitude || diary.lat || diary.latitude || 0;
+          const lng = diary.location?.longitude || diary.lng || diary.longitude || 0;
+
+          return {
+            id: diary.diaryId,
+            lat,
+            lng,
+            profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+            title: diary.title,
+          };
+        });
       setMapMarkers(markers);
     }
   }, [zoomLevel, clusterData, mapDiaries, diaries]);
@@ -544,25 +597,16 @@ export default function UserProfilePage() {
           {/* 다이어리 그리드 - 스크롤 가능한 별도 박스 */}
           <div className='overflow-y-auto max-h-[600px] pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100'>
             <div className='grid grid-cols-3 gap-4'>
-              {diaries.length > 0
-                ? diaries.map((diary, index) => (
-                    <div
-                      key={diary.diaryId}
-                      ref={index === diaries.length - 1 ? lastDiaryRef : null}
-                    >
-                      <DiaryCard diary={diary} />
-                    </div>
-                  ))
-                : // 다이어리가 없을 경우 빈 그리드 셀 9개 생성
-                  Array.from({ length: 9 }).map((_, index) => (
-                    <EmptyDiaryCard key={index} index={index} />
-                  ))}
+              {diaries.length > 0 ? (
+                diaries.map((diary, index) => (
+                  <div key={diary.diaryId} ref={index === diaries.length - 1 ? lastDiaryRef : null}>
+                    <DiaryCard diary={diary} />
+                  </div>
+                ))
+              ) : (
+                <EmptyState isMyself={isMyself} profileName={profile.nickname} />
+              )}
             </div>
-
-            {/* 더 이상 불러올 데이터가 없을 때 */}
-            {diaries.length === 0 && (
-              <div className='text-center py-4 text-gray-500'>작성한 다이어리가 없습니다.</div>
-            )}
           </div>
         </div>
       </div>
