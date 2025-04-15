@@ -198,7 +198,6 @@ const DiaryEditPage: FC = () => {
         // UUID와 구분자를 제외한 원본 파일명 추출
         const storedName = v4() + '-' + originalName;
 
-        console.log('업로드 완료, 접근 URL:', accessUrl);
         // 3. DiaryMedia.MutateDto 형태로 미디어 아이템 생성
         const mediaItem: Diary.DiaryMedia.MutateDto = {
           mediaId,
@@ -209,7 +208,7 @@ const DiaryEditPage: FC = () => {
           url: accessUrl, // S3 접근 URL
           orderIndex, // 정렬 순서
         };
-
+        ㅣ;
         newMediaItems.push(mediaItem);
       }
 
@@ -258,7 +257,6 @@ const DiaryEditPage: FC = () => {
       thumbnailUrl: mediaList.length > 0 ? mediaList[0].url : undefined,
     };
 
-    console.log('formData', formData);
     try {
       await DiaryService.updateDiary(diaryId as string, formData);
       alert('다이어리 수정 완료');
