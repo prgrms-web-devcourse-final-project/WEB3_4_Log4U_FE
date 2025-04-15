@@ -320,6 +320,10 @@ export default function GoogleMapComponent({
               key={`diary-${marker.id}`}
               position={{ lat: marker.lat, lng: marker.lng }}
               title={marker.title}
+              icon={{
+                url: marker.profileUrl,
+                scaledSize: new window.google.maps.Size(30, 30),
+              }}
               zIndex={isInPath ? 100 : 10}
               onClick={() => {
                 if (marker.id && typeof marker.id === 'string' && marker.id.startsWith('diary_')) {

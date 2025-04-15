@@ -337,10 +337,10 @@ export default function HomePage() {
           const validDiaries = diaries.filter(diary => {
             const hasValidCoords =
               diary &&
-              typeof diary.latitude === 'number' &&
-              typeof diary.longitude === 'number' &&
-              !isNaN(diary.latitude) &&
-              !isNaN(diary.longitude);
+              typeof diary.lat === 'number' &&
+              typeof diary.lon === 'number' &&
+              !isNaN(diary.lat) &&
+              !isNaN(diary.lon);
 
             if (!hasValidCoords) {
               console.warn('유효하지 않은 다이어리 좌표:', diary);
@@ -446,9 +446,9 @@ export default function HomePage() {
       const diaryMarkers = mapDiaries
         .filter(diary => {
           // 위도/경도 데이터 검증 및 로깅
-          const isValid = isValidCoordinate(diary.latitude) && isValidCoordinate(diary.longitude);
+          const isValid = isValidCoordinate(diary.lat) && isValidCoordinate(diary.lon);
           if (!isValid) {
-            console.warn('유효하지 않은 좌표:', diary.diaryId, diary.latitude, diary.longitude);
+            console.warn('유효하지 않은 좌표:', diary.diaryId, diary.lat, diary.lon);
           }
           return isValid;
         })
@@ -456,8 +456,8 @@ export default function HomePage() {
           // 각 다이어리의 데이터 확인
           const marker = {
             id: `diary_${diary.diaryId}`, // 고유한 ID 생성
-            lat: Number(diary.latitude), // 명시적으로 숫자로 변환
-            lng: Number(diary.longitude), // 명시적으로 숫자로 변환
+            lat: Number(diary.lat), // 명시적으로 숫자로 변환
+            lng: Number(diary.lon), // 명시적으로 숫자로 변환
             profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
             title: diary.title || '제목 없음',
           };
