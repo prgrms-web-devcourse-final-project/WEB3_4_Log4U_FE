@@ -16,7 +16,9 @@ interface GoogleMapComponentProps {
   markers: MapMarker[];
   onZoomChanged?: (newZoom: number) => void;
   onBoundsChanged?: (bounds: { north: number; south: number; east: number; west: number }) => void;
+  onCenterChanged?: (center: { lat: number; lng: number }) => void; // 새로운 prop
   initialZoom?: number;
+  initialCenter?: { lat: number; lng: number }; // 새로운 prop
   pathColor?: string;
   height?: string;
 }
@@ -25,18 +27,28 @@ export default function GoogleMapComponent({
   markers,
   onZoomChanged,
   onBoundsChanged,
+  onCenterChanged,
   initialZoom = 11,
+  initialCenter, // 새로 추가된 prop
   pathColor = '#FF5353',
   height = '300px',
-}: GoogleMapComponentProps) {
+}: GoogleMapComponentProps & {
+  initialCenter?: { lat: number; lng: number };
+}) {
   console.log(markers, 'markers!!!!!!');
+
   // 맵 레퍼런스
   const mapRef = useRef<google.maps.Map | null>(null);
-  // 지도 중심 좌표 상태 추가
+
+  // 지도 중심 좌표 상태 추가 - 초기값을 props에서 받을 수 있도록 수정
   const [center, setCenter] = useState({
-    lat: 37.5665, // 서울 기본값
-    lng: 126.978,
+    lat: initialCenter?.lat || 37.5665, // 서울 기본값 또는 전달받은 값
+    lng: initialCenter?.lng || 126.978,
   });
+
+  // 현재 중심 좌표를 부모 컴포넌트에 전달
+  const centerChangedRef = useRef(false);
+
   // 사용자 위치 상태 추가
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   // 경로 표시용 정렬된 마커 배열
@@ -150,7 +162,7 @@ export default function GoogleMapComponent({
     }
   }, []);
 
-  // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때)
+  // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때) - 수정
   const handleIdle = useCallback(() => {
     if (!mapRef.current) return;
 
@@ -158,10 +170,18 @@ export default function GoogleMapComponent({
       // 중심 좌표 업데이트
       const newCenter = mapRef.current?.getCenter();
       if (newCenter) {
-        setCenter({
+        const updatedCenter = {
           lat: newCenter.lat(),
           lng: newCenter.lng(),
-        });
+        };
+        setCenter(updatedCenter);
+
+        // 첫 로드 이후에만 중심 변경 이벤트 발생
+        if (centerChangedRef.current && onCenterChanged) {
+          onCenterChanged(updatedCenter);
+        } else {
+          centerChangedRef.current = true;
+        }
       }
 
       // 줌 레벨 정보 전달 - 줌 레벨이 변경된 경우에만
