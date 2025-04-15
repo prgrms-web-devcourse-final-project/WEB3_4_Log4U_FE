@@ -428,9 +428,14 @@ export default function HomePage() {
     if (zoomLevel <= 13 && clusterData.length > 0) {
       // 클러스터 데이터 마커
       const markers = clusterData
-        .filter(cluster => isValidCoordinate(cluster.lat) && isValidCoordinate(cluster.lon))
+        .filter(
+          cluster =>
+            isValidCoordinate(cluster.lat) &&
+            isValidCoordinate(cluster.lon) &&
+            cluster.diaryCount > 0
+        )
         .map(cluster => ({
-          id: `cluster_${cluster.areaId}`, // 고유한 ID 생성: 'cluster_' 접두사 추가
+          id: cluster.areaId, // 고유한 ID 생성: 'cluster_' 접두사 추가
           lat: Number(cluster.lat), // 명시적으로 숫자로 변환
           lng: Number(cluster.lon), // 명시적으로 숫자로 변환
           profileUrl: '/hot-logger.png', // 클러스터 아이콘
@@ -455,7 +460,7 @@ export default function HomePage() {
         .map(diary => {
           // 각 다이어리의 데이터 확인
           const marker = {
-            id: `diary_${diary.diaryId}`, // 고유한 ID 생성
+            id: diary.diaryId, // 고유한 ID 생성
             lat: Number(diary.lat), // 명시적으로 숫자로 변환
             lng: Number(diary.lon), // 명시적으로 숫자로 변환
             profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
