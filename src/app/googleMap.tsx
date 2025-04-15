@@ -108,21 +108,77 @@ export default function GoogleMapComponent({
     return markers.map(marker => {
       // 클러스터 마커인 경우 (count 속성이 있는 경우)
       if (marker.count !== undefined) {
+        // 클러스터 크기에 따라 스타일 조정
+        const getClusterStyle = (count: number) => {
+          if (count < 10) {
+            return {
+              scale: 50,
+              fontColor: 'white',
+              fontSize: '14px',
+              bgColor: '#3B82F6', // 파란색
+              borderColor: '#2563EB',
+              zIndex: 10,
+            };
+          } else if (count < 50) {
+            return {
+              scale: 55,
+              fontColor: 'white',
+              fontSize: '15px',
+              bgColor: '#10B981', // 초록색
+              borderColor: '#059669',
+              zIndex: 20,
+            };
+          } else {
+            return {
+              scale: 60,
+              fontColor: 'white',
+              fontSize: '16px',
+              bgColor: '#F59E0B', // 주황색
+              borderColor: '#D97706',
+              zIndex: 30,
+            };
+          }
+        };
+
+        const style = getClusterStyle(marker.count);
+
+        // 클러스터 스타일 타입 정의
+        interface ClusterStyle {
+          scale: number;
+          fontColor: string;
+          fontSize: string;
+          bgColor: string;
+          borderColor: string;
+          zIndex: number;
+        }
+
+        // SVG 원형 클러스터 생성
+        const createClusterIcon = (count: number, style: ClusterStyle) => {
+          // SVG 원형 마커 생성
+          const svg = `
+            <svg width="${style.scale}" height="${style.scale}" viewBox="0 0 ${style.scale} ${style.scale}" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="${style.scale / 2}" cy="${style.scale / 2}" r="${style.scale / 2 - 2}" fill="${style.bgColor}" stroke="${style.borderColor}" stroke-width="2"/>
+              <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="${style.fontColor}" 
+                    font-family="Arial, sans-serif" font-weight="bold" font-size="${style.fontSize}">
+                ${count}
+              </text>
+            </svg>
+          `;
+
+          return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+        };
+
         return (
           <Marker
             key={marker.id}
             position={{ lat: marker.lat, lng: marker.lng }}
             icon={{
-              url: marker.profileUrl,
-              scaledSize: new window.google.maps.Size(40, 40),
-            }}
-            label={{
-              text: `${marker.count}`,
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 'bold',
+              url: createClusterIcon(marker.count, style),
+              scaledSize: new window.google.maps.Size(style.scale, style.scale),
+              anchor: new window.google.maps.Point(style.scale / 2, style.scale / 2),
             }}
             title={marker.title}
+            zIndex={style.zIndex}
           />
         );
       }
