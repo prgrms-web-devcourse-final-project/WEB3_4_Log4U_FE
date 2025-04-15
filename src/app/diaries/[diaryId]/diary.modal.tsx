@@ -211,7 +211,7 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
       assert(diary, '다이어리가 존재하지 않습니다.');
       await DiaryService.deleteDiary(diary.diaryId);
 
-      router.push('/diaries');
+      router.push('/');
     } catch (err) {
       console.error('다이어리 삭제 중 오류 발생:', err);
       const errorMsg = '다이어리를 삭제하는 중 오류가 발생했습니다.';
@@ -518,7 +518,11 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
 
   // 다이어리 작성자 정보 표시
   const authorName = diary.authorNickname;
-  const locationText = diary?.dongmyun || '위치 정보 없음';
+  // 위치 정보 표시를 더 상세하게 수정 (Diary.Detail 타입에 맞게 수정)
+  const locationText =
+    diary.location?.sido && diary.location?.sigungu
+      ? `${diary.location.sido} ${diary.location.sigungu}`
+      : '위치 정보 없음';
 
   // 현재 로그인한 사용자 ID
   const currentUserId = user?.userId;
@@ -742,7 +746,28 @@ export default function DiaryModal({ diary, user, diaryId, isAuthor, onClose }: 
                 </div>
                 <div>
                   <div className='font-bold'>{authorName}</div>
-                  <div className='text-sm text-gray-600'>{locationText}</div>
+                  <div className='flex items-center text-sm text-gray-600'>
+                    <svg
+                      className='h-4 w-4 mr-1 text-[#6c584c]'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      stroke='currentColor'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth='2'
+                        d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
+                      />
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth='2'
+                        d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
+                      />
+                    </svg>
+                    {locationText}
+                  </div>
                 </div>
               </Link>
             </div>

@@ -39,9 +39,13 @@ export namespace Diary {
 
   export interface Location {
     latitude: number;
+
     longitude: number;
+
     sido: string;
+
     sigungu: string;
+
     eupmyeondong: string;
   }
 
@@ -73,9 +77,7 @@ export namespace Diary {
 
     authorProfileImage: string;
 
-    latitude: number;
-
-    longitude: number;
+    location: Location;
 
     title: string;
 
@@ -92,12 +94,6 @@ export namespace Diary {
     thumbnailUrl: string;
 
     likeCount: number;
-
-    sido: string; // 시/도 (서울특별시, 경기도 등)
-
-    sigungu: string; // 시/군/구 (강남구, 성남시 등)
-
-    dongmyun: string; // 읍/면/동 (역삼동, 수서동 등)
 
     mediaList: DiaryMedia[];
   }
