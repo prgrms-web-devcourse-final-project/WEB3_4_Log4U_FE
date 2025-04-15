@@ -62,7 +62,7 @@ export class MapService {
         url: this.GET_GEOLOCATION_API,
         method: 'GET',
         params: {
-          coords: `${latitude},${longitude}`,
+          coords: `${longitude},${latitude}`,
           output: 'json',
         },
       });
