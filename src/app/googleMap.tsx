@@ -371,14 +371,10 @@ export default function GoogleMapComponent({
                 scaledSize: new window.google.maps.Size(40, 54),
                 anchor: new window.google.maps.Point(20, 52),
               }}
+              clickable={true}
               zIndex={isInPath ? 100 : 10}
               onClick={() => {
-                if (marker.id && typeof marker.id === 'string' && marker.id.startsWith('diary_')) {
-                  const diaryId = marker.id.replace('diary_', '');
-                  if (!isNaN(Number(diaryId))) {
-                    window.location.href = `/diaries/${diaryId}`;
-                  }
-                }
+                window.location.href = `/diaries/${marker.id}`;
               }}
             />
           );
