@@ -302,6 +302,17 @@ function SearchContent() {
     setHasMore(true);
   };
 
+  // 지도 중심 좌표 추가
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
+    lat: 37.5665, // 초기 서울 중심 좌표
+    lng: 126.978,
+  });
+
+  // 중심 좌표 변경 핸들러 추가
+  const handleCenterChanged = useCallback((newCenter: { lat: number; lng: number }) => {
+    setMapCenter(newCenter);
+  }, []);
+
   return (
     <div className='flex'>
       {/* 중앙 컨텐츠 */}
@@ -373,11 +384,13 @@ function SearchContent() {
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent
-            key={`map-${zoomLevel}-${mapMarkers.length}`} // 키 추가로 강제 리렌더링 유도
+            key={`map-${Math.floor(zoomLevel)}`}
             markers={mapMarkers?.filter(marker => marker.lat && marker.lng) ?? []}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
+            onCenterChanged={handleCenterChanged}
             initialZoom={zoomLevel}
+            initialCenter={mapCenter} // 현재 중심 좌표 전달
           />
 
           {/* 맵 로딩 오버레이 */}
