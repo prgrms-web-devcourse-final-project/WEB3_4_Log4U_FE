@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 
 interface MapMarker {
@@ -27,6 +27,11 @@ export default function GoogleMapComponent({
 }: GoogleMapComponentProps) {
   // 맵 레퍼런스
   const mapRef = useRef<google.maps.Map | null>(null);
+  // 지도 중심 좌표 상태 추가
+  const [center, setCenter] = useState({
+    lat: 37.5665, // 서울 기본값
+    lng: 126.978,
+  });
 
   // 구글 맵 API 로드
   const { isLoaded } = useJsApiLoader({
@@ -38,12 +43,6 @@ export default function GoogleMapComponent({
   const mapContainerStyle = {
     width: '100%',
     height: '100%',
-  };
-
-  // 지도 중심 좌표 (서울)
-  const center = {
-    lat: 37.5665,
-    lng: 126.978,
   };
 
   // 맵 로드 완료 핸들러
@@ -72,6 +71,15 @@ export default function GoogleMapComponent({
   // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때)
   const handleIdle = useCallback(() => {
     if (!mapRef.current) return;
+
+    // 중심 좌표 업데이트
+    const newCenter = mapRef.current.getCenter();
+    if (newCenter) {
+      setCenter({
+        lat: newCenter.lat(),
+        lng: newCenter.lng(),
+      });
+    }
 
     // 줌 레벨 정보 전달
     if (onZoomChanged) {
