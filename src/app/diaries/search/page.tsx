@@ -42,8 +42,14 @@ function SearchContent() {
   // 마커 데이터를 state로 관리
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
 
-  // 맵 데이터 로드를 위한 디바운싱 타이머 참조
+  // API 호출 제어를 위한 상태 추가
+  const [shouldLoadMapData, setShouldLoadMapData] = useState(false);
+  // API 호출 제어를 위한 타이머 참조
   const mapDataTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // API 호출 횟수 제한을 위한 카운터
+  const apiCallCountRef = useRef(0);
+  // 마지막 API 호출 시간
+  const lastApiCallTimeRef = useRef(0);
 
   // 정렬 방식 설정
   const sort = activeTab === '최신순' ? Diary.SortType.LATEST : Diary.SortType.POPULAR;
@@ -115,15 +121,26 @@ function SearchContent() {
 
   // 맵 데이터 로드 함수
   const loadMapData = useCallback(async () => {
+    // API 호출 시간 제한 (최소 2초 간격)
+    const now = Date.now();
+    if (now - lastApiCallTimeRef.current < 2000) {
+      console.log('맵 데이터 로드 건너뜀: 이전 API 호출 후 2초 이내');
+      return;
+    }
+
     if (!mapBounds || mapLoading) {
       console.log('맵 로드 건너뜀: bounds 없음 또는 로딩 중', { mapBounds, mapLoading });
       return;
     }
 
-    console.log('맵 데이터 로드 시작', {
+    // API 호출 시간 기록
+    lastApiCallTimeRef.current = now;
+    // API 호출 카운트 증가
+    apiCallCountRef.current += 1;
+
+    console.log(`맵 데이터 로드 시작 (${apiCallCountRef.current}번째 호출)`, {
       bounds: mapBounds,
       zoom: zoomLevel,
-      현재마커수: mapMarkers.length,
     });
 
     setMapLoading(true);
@@ -139,10 +156,7 @@ function SearchContent() {
       if (zoomLevel <= 13) {
         // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드
         const clusters = await MapService.getMapCluster(query);
-        console.log(
-          `클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`,
-          clusters
-        );
+        console.log(`클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`);
 
         // diaryCount가 0인 클러스터는 제외
         const markers = clusters
@@ -156,15 +170,12 @@ function SearchContent() {
             title: `${cluster.areaName} (${cluster.diaryCount}개)`,
           }));
 
-        console.log(`클러스터 마커 생성: ${markers.length}개`, markers);
+        console.log(`클러스터 마커 생성: ${markers.length}개`);
         setMapMarkers(markers);
       } else {
         // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드
         const diaries = await MapService.getMapDiaries(query);
-        console.log(
-          `다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`,
-          diaries
-        );
+        console.log(`다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`);
 
         // 유효한 좌표가 있는 다이어리만 필터링
         const validDiaries = diaries.filter(
@@ -185,12 +196,13 @@ function SearchContent() {
           title: diary.title,
         }));
 
-        console.log(`다이어리 마커 생성: ${markers.length}개`, markers);
+        console.log(`다이어리 마커 생성: ${markers.length}개`);
 
         if (markers.length > 0) {
           setMapMarkers(markers);
         } else {
           console.warn('생성된 마커가 없습니다. API 응답 확인 필요');
+          setMapMarkers([]);
         }
       }
     } catch (error) {
@@ -198,40 +210,36 @@ function SearchContent() {
       setMapMarkers([]); // 오류 시 마커 초기화
     } finally {
       setMapLoading(false);
+      // API 로드 상태 초기화
+      setShouldLoadMapData(false);
     }
-  }, [mapBounds, zoomLevel, mapLoading, mapMarkers.length]);
+  }, [mapBounds, zoomLevel, mapLoading]);
 
   // 줌 레벨 변경 처리 함수
   const handleZoomChanged = useCallback(
     (newZoom: number) => {
-      // 정수로 변환하거나 소수점 한 자리까지만 비교하여 변경 감지
-      const roundedNewZoom = Math.round(newZoom);
-      const roundedCurrentZoom = Math.round(zoomLevel);
+      // 정수로 변환하여 변경 감지
+      const intZoom = Math.floor(newZoom);
+      const currentIntZoom = Math.floor(zoomLevel);
 
-      if (roundedNewZoom !== roundedCurrentZoom) {
-        console.log('줌 레벨 변경:', roundedNewZoom, '이전:', roundedCurrentZoom);
-        setZoomLevel(newZoom);
+      if (intZoom !== currentIntZoom) {
+        console.log('줌 레벨 변경:', intZoom, '이전:', currentIntZoom);
 
-        // 줌 레벨 변경 시 즉시 새 데이터 로드
+        // 정수 값으로만 저장
+        setZoomLevel(intZoom);
+
+        // 줌 레벨 변경 시 바로 로드 트리거
         const thresholdCrossed =
-          (roundedCurrentZoom <= 13 && roundedNewZoom > 13) ||
-          (roundedCurrentZoom > 13 && roundedNewZoom <= 13);
+          (currentIntZoom <= 13 && intZoom > 13) || (currentIntZoom > 13 && intZoom <= 13);
 
         if (thresholdCrossed && mapBounds) {
-          // 기존 타이머 취소
-          if (mapDataTimerRef.current) {
-            clearTimeout(mapDataTimerRef.current);
-          }
-
-          setMapLoading(true);
+          // 클러스터 <-> 개별 마커 변경 시 즉시 로드
           setMapMarkers([]); // 마커 초기화
-
-          // 즉시 데이터 로드 시작
-          loadMapData();
+          setShouldLoadMapData(true);
         }
       }
     },
-    [zoomLevel, mapBounds, loadMapData]
+    [zoomLevel, mapBounds]
   );
 
   // 맵 확장 토글 핸들러
@@ -239,54 +247,124 @@ function SearchContent() {
     setIsMapExpanded(prev => !prev);
   }, []);
 
-  // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
+  // 맵 경계 변경 처리 함수 - 더 엄격한 비교와 스로틀링 적용
+  const handleBoundsChanged = useCallback(
+    (bounds: { north: number; south: number; east: number; west: number }) => {
+      // 로딩 중일 때는 바운드 업데이트 무시
+      if (mapLoading) return;
+
+      // 소수점 2자리까지만 사용 (정밀도 감소)
+      const newBounds = {
+        north: Math.round(bounds.north * 100) / 100,
+        south: Math.round(bounds.south * 100) / 100,
+        east: Math.round(bounds.east * 100) / 100,
+        west: Math.round(bounds.west * 100) / 100,
+      };
+
+      // 이전 bounds와 똑같으면 무시
+      if (
+        mapBounds &&
+        newBounds.north === Math.round(mapBounds.north * 100) / 100 &&
+        newBounds.south === Math.round(mapBounds.south * 100) / 100 &&
+        newBounds.east === Math.round(mapBounds.east * 100) / 100 &&
+        newBounds.west === Math.round(mapBounds.west * 100) / 100
+      ) {
+        return;
+      }
+
+      console.log('맵 경계 변경:', {
+        north: newBounds.north,
+        south: newBounds.south,
+        east: newBounds.east,
+        west: newBounds.west,
+      });
+
+      // bounds 상태 업데이트
+      setMapBounds(newBounds);
+
+      // 데이터 로드 요청 플래그 설정
+      setShouldLoadMapData(true);
+    },
+    [mapBounds, mapLoading]
+  );
+
+  // API 호출 로직 분리 - shouldLoadMapData가 true일 때만 호출
   useEffect(() => {
+    // 데이터 로드가 필요하지 않으면 종료
+    if (!shouldLoadMapData || !mapBounds) return;
+
+    // API 호출 횟수 제한 (선택적)
+    if (apiCallCountRef.current > 30) {
+      console.warn('너무 많은 API 호출 (30회 이상), 페이지를 새로고침 해주세요');
+      return;
+    }
+
     // 이전 타이머가 있으면 취소
     if (mapDataTimerRef.current) {
       clearTimeout(mapDataTimerRef.current);
     }
 
-    // mapBounds가 null이면 아직 맵이 준비되지 않은 상태
-    if (!mapBounds) return;
-
-    // 500ms 후에 데이터 로드 (디바운싱)
+    // 1초 후에 데이터 로드 (지연)
     mapDataTimerRef.current = setTimeout(() => {
       loadMapData();
-    }, 500);
+    }, 1000);
 
-    // 컴포넌트 언마운트 시 타이머 정리
     return () => {
       if (mapDataTimerRef.current) {
         clearTimeout(mapDataTimerRef.current);
       }
     };
-  }, [mapBounds, zoomLevel, isMapExpanded, loadMapData]); // isMapExpanded 추가하여 확장시 맵 데이터 새로고침
+  }, [shouldLoadMapData, mapBounds, loadMapData]);
 
-  // 맵 경계 변경 처리 함수
-  const handleBoundsChanged = useCallback(
-    (bounds: { north: number; south: number; east: number; west: number }) => {
-      // 기존 bounds와 새 bounds가 동일하면 상태 업데이트 하지 않음
-      if (
-        mapBounds &&
-        Math.abs(bounds.north - mapBounds.north) < 0.0001 &&
-        Math.abs(bounds.south - mapBounds.south) < 0.0001 &&
-        Math.abs(bounds.east - mapBounds.east) < 0.0001 &&
-        Math.abs(bounds.west - mapBounds.west) < 0.0001
-      ) {
-        return;
+  // 지도 확장 상태 변경 시 지도 리사이즈 및 데이터 리로드
+  useEffect(() => {
+    // 지도 확장 상태가 변경되면 약간의 지연 후 데이터 로드 트리거
+    const timer = setTimeout(() => {
+      if (mapBounds) {
+        setShouldLoadMapData(true);
       }
-      console.log('맵 경계 변경:', bounds);
-      setMapBounds(bounds);
-    },
-    [mapBounds]
-  );
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [isMapExpanded, mapBounds]);
 
   // 초기 데이터 로드 및 탭/검색어 변경시 재로드
   useEffect(() => {
     setCursorId(undefined);
     setHasMore(true);
     fetchSearchResults(true);
-  }, [query, activeTab, fetchSearchResults]);
+  }, [query, activeTab]);
+
+  // 지도 중심 좌표 추가
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
+    lat: 37.5665, // 초기 서울 중심 좌표
+    lng: 126.978,
+  });
+
+  // 중심 좌표 변경 핸들러 추가 - 스로틀링 적용
+  const lastCenterChangeTimeRef = useRef<number>(0);
+
+  const handleCenterChanged = useCallback(
+    (newCenter: { lat: number; lng: number }) => {
+      // 너무 빠른 연속 호출 방지 (최소 300ms 간격)
+      const now = Date.now();
+      if (now - lastCenterChangeTimeRef.current < 300) {
+        return;
+      }
+      lastCenterChangeTimeRef.current = now;
+
+      // 이전 중심점과 새 중심점이 너무 가까우면 업데이트 하지 않음
+      if (
+        Math.abs(newCenter.lat - mapCenter.lat) < 0.001 &&
+        Math.abs(newCenter.lng - mapCenter.lng) < 0.001
+      ) {
+        return;
+      }
+
+      setMapCenter(newCenter);
+    },
+    [mapCenter]
+  );
 
   // 무한 스크롤 설정
   useEffect(() => {
@@ -324,17 +402,6 @@ function SearchContent() {
       }
     };
   }, [fetchSearchResults, hasMore, loading, isMapExpanded]);
-
-  // 지도 중심 좌표 추가
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
-    lat: 37.5665, // 초기 서울 중심 좌표
-    lng: 126.978,
-  });
-
-  // 중심 좌표 변경 핸들러 추가
-  const handleCenterChanged = useCallback((newCenter: { lat: number; lng: number }) => {
-    setMapCenter(newCenter);
-  }, []);
 
   // 검색 제출 핸들러
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -427,9 +494,8 @@ function SearchContent() {
         <div
           className={`mt-4 relative rounded-lg overflow-hidden border shadow-sm transition-all duration-300 ${isMapExpanded ? 'h-[calc(100vh-150px)]' : 'h-[300px]'}`}
         >
-          {/* 구글 맵 컴포넌트 */}
+          {/* 구글 맵 컴포넌트 - key 속성 제거로 불필요한 재생성 방지 */}
           <GoogleMapComponent
-            key={`map-${Math.floor(zoomLevel)}-${isMapExpanded ? 'expanded' : 'normal'}`}
             markers={mapMarkers?.filter(marker => marker.lat && marker.lng) ?? []}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
@@ -451,6 +517,13 @@ function SearchContent() {
           <div className='absolute top-2 left-2 bg-white px-3 py-1 rounded-md shadow-md text-xs'>
             {zoomLevel <= 13 ? '지역 클러스터 보기' : '개별 다이어리 보기'}
           </div>
+
+          {/* API 호출 횟수 표시 (개발용, 프로덕션에서는 제거) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className='absolute bottom-2 left-2 bg-white px-3 py-1 rounded-md shadow-md text-xs'>
+              API 호출: {apiCallCountRef.current}회
+            </div>
+          )}
         </div>
 
         {/* 다이어리 그리드 - 지도가 확장되었을 때는 숨김 */}
