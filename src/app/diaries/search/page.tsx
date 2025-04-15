@@ -110,6 +110,87 @@ function SearchContent() {
     [query, sort, cursorId, loading]
   );
 
+  // 줌 레벨 변경 처리 함수
+  const handleZoomChanged = useCallback(
+    (newZoom: number) => {
+      if (newZoom !== zoomLevel) {
+        console.log('줌 레벨 변경:', newZoom, '이전:', zoomLevel);
+        setZoomLevel(newZoom);
+
+        // 줌 레벨 기준점을 넘어가는 경우에만 마커 초기화 및 로딩 표시
+        const crossingThreshold =
+          (zoomLevel <= 13 && newZoom > 13) || (zoomLevel > 13 && newZoom <= 13);
+
+        if (crossingThreshold && mapBounds) {
+          // 즉시 로딩 상태 설정 및 마커 초기화
+          setMapLoading(true);
+          setMapMarkers([]);
+
+          // 즉시 데이터 로드 트리거 (디바운싱 취소)
+          if (mapDataTimerRef.current) {
+            clearTimeout(mapDataTimerRef.current);
+          }
+
+          // 바로 데이터 로드
+          const query: Map.GetListQueryDto = {
+            north: mapBounds.north,
+            south: mapBounds.south,
+            east: mapBounds.east,
+            west: mapBounds.west,
+            zoom: newZoom,
+          };
+
+          // 줌 레벨에 따라 적절한 API 호출
+          if (newZoom <= 13) {
+            MapService.getMapCluster(query)
+              .then(clusters => {
+                console.log(`클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${newZoom}`);
+                const markers = clusters
+                  .filter(cluster => cluster.diaryCount > 0)
+                  .map(cluster => ({
+                    id: cluster.areaId,
+                    lat: cluster.lat,
+                    lng: cluster.lon,
+                    profileUrl: '/hot-logger.png',
+                    count: cluster.diaryCount,
+                    title: `${cluster.areaName} (${cluster.diaryCount}개)`,
+                  }));
+                setMapMarkers(markers);
+              })
+              .catch(error => {
+                console.error('맵 데이터 로드 중 오류 발생:', error);
+                setMapMarkers([]);
+              })
+              .finally(() => {
+                setMapLoading(false);
+              });
+          } else {
+            MapService.getMapDiaries(query)
+              .then(diaries => {
+                console.log(`다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${newZoom}`);
+                const markers = diaries.map(diary => ({
+                  id: diary.diaryId,
+                  lat: diary.latitude,
+                  lng: diary.longitude,
+                  profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
+                  title: diary.title,
+                }));
+                setMapMarkers(markers);
+              })
+              .catch(error => {
+                console.error('맵 데이터 로드 중 오류 발생:', error);
+                setMapMarkers([]);
+              })
+              .finally(() => {
+                setMapLoading(false);
+              });
+          }
+        }
+      }
+    },
+    [zoomLevel, mapBounds]
+  );
+
   // 맵 데이터 로드 함수 - 디바운싱 적용
   const loadMapData = useCallback(async () => {
     if (!mapBounds || mapLoading) return;
@@ -165,7 +246,7 @@ function SearchContent() {
     } finally {
       setMapLoading(false);
     }
-  }, [mapBounds, zoomLevel, mapLoading]); // clusterData와 mapDiaries 의존성 제거
+  }, [mapBounds, zoomLevel, mapLoading]);
 
   // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
   useEffect(() => {
@@ -189,34 +270,6 @@ function SearchContent() {
       }
     };
   }, [mapBounds, zoomLevel]);
-
-  // 줌 레벨 변경 처리 함수
-  const handleZoomChanged = useCallback(
-    (newZoom: number) => {
-      if (newZoom !== zoomLevel) {
-        console.log('줌 레벨 변경:', newZoom, '이전:', zoomLevel);
-        setZoomLevel(newZoom);
-
-        // 줌 레벨 변경 시 바로 로딩 상태 표시 (사용자 피드백 개선)
-        if (mapBounds) {
-          setMapLoading(true);
-
-          // 타이머 동작 여부와 상관없이 즉시 마커 초기화
-          // 줌 레벨 변경 시 이전 마커가 잠시 표시되는 문제 방지
-          if (newZoom <= 13) {
-            if (mapMarkers.some(m => m.count === undefined)) {
-              setMapMarkers([]); // 개별 마커에서 클러스터로 전환 시 초기화
-            }
-          } else {
-            if (mapMarkers.some(m => m.count !== undefined)) {
-              setMapMarkers([]); // 클러스터에서 개별 마커로 전환 시 초기화
-            }
-          }
-        }
-      }
-    },
-    [zoomLevel, mapBounds, mapMarkers]
-  );
 
   // 맵 경계 변경 처리 함수
   const handleBoundsChanged = useCallback(
