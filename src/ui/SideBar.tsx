@@ -21,10 +21,33 @@ export default function SideBar({ children }: SideBarProps): React.JSX.Element {
     </aside>
   );
 }
+
 export function LeftSideBar() {
   // 현재 페이지 새로고침하는 함수
   const refreshPage = () => {
     window.location.reload();
+  };
+
+  // 현재 경로 확인을 위해 pathname 가져오기
+  const [pathname, setPathname] = useState<string>('');
+
+  useEffect(() => {
+    // 클라이언트 사이드에서만 실행
+    if (typeof window !== 'undefined') {
+      setPathname(window.location.pathname);
+    }
+  }, []);
+
+  // 프로필 생성 페이지인지 확인
+  const isProfileSetupPage = pathname === '/users/profile/new';
+
+  // 링크 핸들러 - 프로필 설정 페이지에서는 이벤트 무시
+  const handleNavigation = (e: React.MouseEvent) => {
+    if (isProfileSetupPage) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('프로필 설정을 완료해야 이동할 수 있습니다.');
+    }
   };
 
   return (
@@ -33,28 +56,44 @@ export function LeftSideBar() {
         log4U
       </h1>
       <div className='grow-2'>
-        <div className='flex items-center mb-2'>
+        <div
+          className={`flex items-center mb-2 ${isProfileSetupPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
           <Image src='/home.png' alt='home image' width={50} height={50} />
-          <Link href='/'>
-            <span className='p-5 text-2xl font-bold'>홈</span>
+          <Link href={isProfileSetupPage ? '#' : '/'} onClick={handleNavigation}>
+            <span className={`p-5 text-2xl font-bold ${isProfileSetupPage ? 'text-gray-400' : ''}`}>
+              홈
+            </span>
           </Link>
         </div>
-        <div className='flex items-center mb-2'>
+        <div
+          className={`flex items-center mb-2 ${isProfileSetupPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
           <Image src='/search.png' alt='search image' width={50} height={50} />
-          <Link href='/diaries/search'>
-            <span className='p-5 text-2xl font-bold'>검색</span>
+          <Link href={isProfileSetupPage ? '#' : '/diaries/search'} onClick={handleNavigation}>
+            <span className={`p-5 text-2xl font-bold ${isProfileSetupPage ? 'text-gray-400' : ''}`}>
+              검색
+            </span>
           </Link>
         </div>
-        <div className='flex items-center mb-2'>
+        <div
+          className={`flex items-center mb-2 ${isProfileSetupPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
           <Image src='/add-diary.png' alt='add diary image' width={50} height={50} />
-          <Link href='/diaries/new'>
-            <span className='p-5 text-2xl font-bold'>만들기</span>
+          <Link href={isProfileSetupPage ? '#' : '/diaries/new'} onClick={handleNavigation}>
+            <span className={`p-5 text-2xl font-bold ${isProfileSetupPage ? 'text-gray-400' : ''}`}>
+              만들기
+            </span>
           </Link>
         </div>
-        <div className='flex items-center mb-2'>
+        <div
+          className={`flex items-center mb-2 ${isProfileSetupPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
           <Image src='/mypage.png' alt='mypage image' width={50} height={50} />
-          <Link href='/mypage'>
-            <span className='p-5 text-2xl font-bold'>마이페이지</span>
+          <Link href={isProfileSetupPage ? '#' : '/mypage'} onClick={handleNavigation}>
+            <span className={`p-5 text-2xl font-bold ${isProfileSetupPage ? 'text-gray-400' : ''}`}>
+              마이페이지
+            </span>
           </Link>
         </div>
       </div>
@@ -77,6 +116,19 @@ export function RightSideBar() {
     error: false,
   });
   const router = useRouter();
+
+  // 현재 경로 확인을 위해 pathname 가져오기
+  const [pathname, setPathname] = useState<string>('');
+
+  useEffect(() => {
+    // 클라이언트 사이드에서만 실행
+    if (typeof window !== 'undefined') {
+      setPathname(window.location.pathname);
+    }
+  }, []);
+
+  // 프로필 생성 페이지인지 확인
+  const isProfileSetupPage = pathname === '/users/profile/new';
 
   // 위치 정보 가져오기
   useEffect(() => {
@@ -193,6 +245,24 @@ export function RightSideBar() {
     router.push(`/diaries/${diaryId}`);
   };
 
+  // 드롭다운 토글 핸들러 - 프로필 설정 페이지에서는 비활성화
+  const toggleDropdown = () => {
+    if (isProfileSetupPage) {
+      console.log('프로필 설정을 완료해야 합니다.');
+      return;
+    }
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  // 다이어리 클릭 핸들러 - 프로필 설정 페이지에서는 비활성화
+  const handleDiaryClickWrapper = (diaryId: number) => {
+    if (isProfileSetupPage) {
+      console.log('프로필 설정을 완료해야 다이어리를 볼 수 있습니다.');
+      return;
+    }
+    handleDiaryClick(diaryId);
+  };
+
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -210,9 +280,13 @@ export function RightSideBar() {
 
   return (
     <SideBar>
-      <div className='grow-1'>
+      <div className={`grow-1 ${isProfileSetupPage ? 'opacity-50' : ''}`}>
         <div className='flex items-center relative profile-dropdown-container'>
-          <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className='flex items-center'>
+          <button
+            onClick={toggleDropdown}
+            className={`flex items-center ${isProfileSetupPage ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            disabled={isProfileSetupPage}
+          >
             <div className='w-[50px] h-[50px] rounded-full overflow-hidden'>
               <img
                 src={user?.profileImage ?? '/test-profile.svg'}
@@ -222,7 +296,7 @@ export function RightSideBar() {
                 className='w-full h-full object-cover'
               />
             </div>
-            <span className='p-5 text-2xl font-bold'>
+            <span className={`p-5 text-2xl font-bold ${isProfileSetupPage ? 'text-gray-400' : ''}`}>
               {loading ? '로딩 중...' : user?.nickname || '사용자'}
             </span>
           </button>
@@ -246,23 +320,31 @@ export function RightSideBar() {
         <div>
           <div className='flex items-center'>
             <Image src={'/sun.png'} alt={'weather image'} width={50} height={50} />
-            <span className='p-5 text-2xl font-bold'>{locationInfo.temperature}</span>
+            <span className={`p-5 text-2xl font-bold ${isProfileSetupPage ? 'text-gray-400' : ''}`}>
+              {locationInfo.temperature}
+            </span>
           </div>
           {locationInfo.loading ? (
             <div className='text-sm text-gray-500 ml-2'>위치 정보 로딩 중...</div>
           ) : locationInfo.error ? (
             <div className='text-sm text-gray-500 ml-2'>위치 정보를 가져올 수 없습니다</div>
           ) : (
-            <div className='text-lg font-medium ml-2'>
+            <div
+              className={`text-lg font-medium ml-2 ${isProfileSetupPage ? 'text-gray-400' : ''}`}
+            >
               {locationInfo.sido} {locationInfo.sigungu}
             </div>
           )}
         </div>
       </div>
-      <div className='grow-2 mt-8'>
+      <div className={`grow-2 mt-8 ${isProfileSetupPage ? 'opacity-50' : ''}`}>
         <div className='flex items-center mb-6'>
           <Image src='/hot-logger.png' alt='hot logger image' width={50} height={50} />
-          <span className='p-5 text-xl font-bold text-[var(--color-text)]'>인기 다이어리</span>
+          <span
+            className={`p-5 text-xl font-bold ${isProfileSetupPage ? 'text-gray-400' : 'text-[var(--color-text)]'}`}
+          >
+            인기 다이어리
+          </span>
         </div>
 
         {loadingDiaries ? (
@@ -277,23 +359,39 @@ export function RightSideBar() {
             {popularDiaries.map((diary, index) => (
               <div
                 key={diary.diaryId}
-                className='relative overflow-hidden rounded-lg cursor-pointer border-l-2 border-[var(--color-secondary)] bg-[#f9f7f5] hover:bg-[#f5f0e8] transition-all duration-200 group'
-                onClick={() => handleDiaryClick(diary.diaryId)}
+                className={`relative overflow-hidden rounded-lg border-l-2 border-[var(--color-secondary)] bg-[#f9f7f5] ${
+                  isProfileSetupPage ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-[#f5f0e8]'
+                } transition-all duration-200 group`}
+                onClick={() => handleDiaryClickWrapper(diary.diaryId)}
               >
                 {/* 순위 표시 */}
                 <div className='absolute left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 flex items-center justify-center'>
-                  <span className='font-medium text-[var(--color-primary)]'>{index + 1}</span>
+                  <span
+                    className={`font-medium ${isProfileSetupPage ? 'text-gray-400' : 'text-[var(--color-primary)]'}`}
+                  >
+                    {index + 1}
+                  </span>
                 </div>
 
                 {/* 콘텐츠 */}
                 <div className='py-3 px-12 pr-8'>
-                  <h3 className='font-medium text-[var(--color-text)] truncate'>{diary.title}</h3>
+                  <h3
+                    className={`font-medium truncate ${isProfileSetupPage ? 'text-gray-400' : 'text-[var(--color-text)]'}`}
+                  >
+                    {diary.title}
+                  </h3>
 
                   {/* 화살표 아이콘 */}
-                  <div className='absolute right-3 top-1/2 transform -translate-y-1/2 opacity-50 group-hover:opacity-80 transition-opacity'>
+                  <div
+                    className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                      isProfileSetupPage
+                        ? 'opacity-30'
+                        : 'opacity-50 group-hover:opacity-80 transition-opacity'
+                    }`}
+                  >
                     <svg
                       xmlns='http://www.w3.org/2000/svg'
-                      className='h-4 w-4 text-[var(--color-primary)]'
+                      className={`h-4 w-4 ${isProfileSetupPage ? 'text-gray-400' : 'text-[var(--color-primary)]'}`}
                       fill='none'
                       viewBox='0 0 24 24'
                       stroke='currentColor'
@@ -311,7 +409,9 @@ export function RightSideBar() {
             ))}
           </div>
         ) : (
-          <div className='text-center p-4 text-[var(--color-text)] opacity-70'>
+          <div
+            className={`text-center p-4 ${isProfileSetupPage ? 'text-gray-400 opacity-50' : 'text-[var(--color-text)] opacity-70'}`}
+          >
             인기 다이어리가 없습니다
           </div>
         )}
