@@ -129,14 +129,17 @@ function SearchContent() {
         const clusters = await MapService.getMapCluster(query);
         console.log(`클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`);
 
-        const markers = clusters.map(cluster => ({
-          id: cluster.areaId,
-          lat: cluster.lat,
-          lng: cluster.lon,
-          profileUrl: '/hot-logger.png', // 클러스터 아이콘
-          count: cluster.diaryCount,
-          title: `${cluster.areaName} (${cluster.diaryCount}개)`,
-        }));
+        // diaryCount가 0인 클러스터는 제외
+        const markers = clusters
+          .filter(cluster => cluster.diaryCount > 0)
+          .map(cluster => ({
+            id: cluster.areaId,
+            lat: cluster.lat,
+            lng: cluster.lon,
+            profileUrl: '/hot-logger.png', // 클러스터 아이콘
+            count: cluster.diaryCount,
+            title: `${cluster.areaName} (${cluster.diaryCount}개)`,
+          }));
         console.log(`클러스터 마커 생성: ${markers.length}개`);
 
         setMapMarkers(markers);
