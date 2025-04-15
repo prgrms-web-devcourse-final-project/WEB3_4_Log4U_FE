@@ -40,9 +40,9 @@ export default function RootLayout({ children }: LayoutProps) {
         }
 
         // 302 상태코드 해결되기 전까지 주석유지
-        // if (!response.data.profileImage || !response.data.nickname) {
-        //   router.push('/users/profile/new');
-        // }
+        if (!response.data.profileImage || !response.data.nickname) {
+          router.push('/users/profile/new');
+        }
       })
       .catch(() => {
         router.push('/login');
