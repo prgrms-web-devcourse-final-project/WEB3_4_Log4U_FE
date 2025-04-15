@@ -41,8 +41,8 @@ const FollowModal: React.FC<FollowModalProps> = ({
       setLoading(true);
       try {
         const response = isFollowers
-          ? await FollowService.getFollowers()
-          : await FollowService.getFollowings();
+          ? await FollowService.getMyFollowers()
+          : await FollowService.getMyFollowings();
         setFollows(response.list || []);
       } catch (error) {
         console.error(`${isFollowers ? '팔로워' : '팔로잉'} 목록을 가져오는 중 오류 발생:`, error);

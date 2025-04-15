@@ -1,12 +1,9 @@
 'use client';
 
-import GoogleMapComponent from '@/app/googleMap';
 import { DiaryService } from '@root/services/diary';
 import { FollowService } from '@root/services/follow';
-import { MapService } from '@root/services/map';
 import { UserService } from '@root/services/user';
 import { Diary } from '@root/types/diary';
-import { Map } from '@root/types/map';
 import { User } from '@root/types/user';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -150,29 +147,6 @@ export default function UserProfilePage() {
     isFollowers: true,
   });
 
-  // 지도 관련 상태 추가
-  const [zoomLevel, setZoomLevel] = useState(11); // 기본 줌 레벨
-  const [mapBounds, setMapBounds] = useState<{
-    north: number;
-    south: number;
-    east: number;
-    west: number;
-  } | null>(null);
-  const [clusterData, setClusterData] = useState<Map.ISummary[]>([]);
-  const [mapDiaries, setMapDiaries] = useState<Map.IDiary.IDetail[]>([]);
-  const [mapLoading, setMapLoading] = useState(false);
-  // 마커 데이터를 state로 관리
-  const [mapMarkers, setMapMarkers] = useState<
-    {
-      id: string | number;
-      lat: number;
-      lng: number;
-      profileUrl: string;
-      count?: number;
-      title?: string;
-    }[]
-  >([]);
-
   // IntersectionObserver를 위한 ref
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastDiaryRef = useRef<HTMLDivElement | null>(null);
@@ -223,7 +197,7 @@ export default function UserProfilePage() {
       // 팔로우 여부 확인 (자신이 아닐 경우)
       if (meData.userId !== userData.userId) {
         try {
-          const followingsData = await FollowService.getFollowings();
+          const followingsData = await FollowService.getMyFollowings();
           // list 속성을 통해 followings 배열에 접근
           const isFollowingUser = followingsData.list.some(
             (following: User.IFollowSummary) => following.userId === userData.userId
@@ -283,137 +257,6 @@ export default function UserProfilePage() {
       throw error;
     }
   };
-
-  // 줌 레벨 변경 처리 함수
-  const handleZoomChanged = useCallback((newZoom: number) => {
-    setZoomLevel(newZoom);
-  }, []);
-
-  // 맵 경계 변경 처리 함수
-  const handleBoundsChanged = useCallback(
-    (bounds: { north: number; south: number; east: number; west: number }) => {
-      setMapBounds(bounds);
-    },
-    []
-  );
-
-  // 맵 데이터 로드 함수 - 디바운싱 적용
-  const loadMapData = useCallback(async () => {
-    if (!mapBounds || mapLoading || !profile) return;
-
-    setMapLoading(true);
-    try {
-      const query: Map.GetListQueryDto = {
-        north: mapBounds.north,
-        south: mapBounds.south,
-        east: mapBounds.east,
-        west: mapBounds.west,
-        zoom: zoomLevel,
-      };
-
-      if (zoomLevel <= 13) {
-        // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드 (유저의 클러스터)
-        const clusters = await MapService.getMapCluster(query);
-        setClusterData(clusters);
-        setMapDiaries([]);
-      } else {
-        // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드 (유저의 다이어리)
-        const diaries = await MapService.getMapDiaries(query);
-        setMapDiaries(diaries);
-        setClusterData([]);
-      }
-    } catch (error) {
-      console.error('맵 데이터 로드 중 오류 발생:', error);
-    } finally {
-      setMapLoading(false);
-    }
-  }, [mapBounds, zoomLevel, mapLoading, profile]);
-
-  // 맵 데이터 로드를 위한 디바운싱 타이머 참조
-  const mapDataTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
-  useEffect(() => {
-    // 이전 타이머가 있으면 취소
-    if (mapDataTimerRef.current) {
-      clearTimeout(mapDataTimerRef.current);
-    }
-
-    // mapBounds가 null이면 아직 맵이 준비되지 않은 상태
-    if (!mapBounds || !profile) return;
-
-    // 500ms 후에 데이터 로드 (디바운싱)
-    mapDataTimerRef.current = setTimeout(() => {
-      loadMapData();
-    }, 500);
-
-    // 컴포넌트 언마운트 시 타이머 정리
-    return () => {
-      if (mapDataTimerRef.current) {
-        clearTimeout(mapDataTimerRef.current);
-      }
-    };
-  }, [mapBounds, zoomLevel, profile, loadMapData]);
-
-  // 마커 데이터 업데이트를 위한 useEffect 추가
-  useEffect(() => {
-    if (zoomLevel <= 13 && clusterData.length > 0) {
-      // 클러스터 데이터 마커
-      const markers = clusterData.map(cluster => ({
-        id: cluster.areaId,
-        lat: cluster.lat,
-        lng: cluster.lon,
-        profileUrl: '/hot-logger.png', // 클러스터 아이콘
-        count: cluster.diaryCount,
-        title: `${cluster.areaName} (${cluster.diaryCount}개)`,
-      }));
-      setMapMarkers(markers);
-    } else if (zoomLevel > 13 && mapDiaries.length > 0) {
-      // 다이어리 마커
-      const markers = mapDiaries
-        .filter(
-          diary =>
-            // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
-            diary.latitude && diary.longitude
-        )
-        .map(diary => {
-          // 최대한 안전하게 좌표 정보 추출
-          const lat = diary.latitude;
-          const lng = diary.longitude;
-
-          return {
-            id: diary.diaryId,
-            lat,
-            lng,
-            profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-            title: diary.title,
-          };
-        });
-      setMapMarkers(markers);
-    } else {
-      // 검색 결과에서의 마커 (백업)
-      const markers = diaries
-        .filter(
-          diary =>
-            // location 객체를 통해 좌표 정보에 접근하거나, 직접 속성에 접근하는 방식 모두 시도
-            diary.location?.latitude && diary.location?.longitude
-        )
-        .map(diary => {
-          // 최대한 안전하게 좌표 정보 추출
-          const lat = diary.location?.latitude;
-          const lng = diary.location?.longitude;
-
-          return {
-            id: diary.diaryId,
-            lat,
-            lng,
-            profileUrl: diary.thumbnailUrl || '/diary-thumbnail-test.png',
-            title: diary.title,
-          };
-        });
-      setMapMarkers(markers);
-    }
-  }, [zoomLevel, clusterData, mapDiaries, diaries]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -565,33 +408,14 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* 다이어리 지도 제목 */}
+        {/* 공개된 다이어리 섹션 */}
         <div className='px-6 py-4 border-b'>
-          <h2 className='text-xl font-bold'>다이어리 지도 - 경로 시각화</h2>
-          <p className='text-sm text-gray-500 mt-1'>
-            {zoomLevel <= 13
-              ? '지역별 다이어리 클러스터를 표시합니다. 확대하여 개별 다이어리를 확인하세요.'
-              : '개별 다이어리 위치를 표시합니다.'}
-          </p>
+          <h2 className='text-xl font-bold'>공개된 다이어리</h2>
         </div>
 
-        {/* 구글 맵 */}
-        <div className='h-[300px] overflow-hidden border rounded-md shadow-sm my-4 mx-6'>
-          <GoogleMapComponent
-            markers={mapMarkers.filter(marker => marker.lat && marker.lng)}
-            onZoomChanged={handleZoomChanged}
-            onBoundsChanged={handleBoundsChanged}
-            initialZoom={zoomLevel}
-            height='300px'
-          />
-        </div>
-
-        {/* 공개된 다이어리 섹션 - 스크롤 가능한 별도 박스 */}
+        {/* 다이어리 그리드 - 스크롤 가능한 별도 박스 */}
         <div className='px-6 py-4'>
-          <h3 className='text-lg font-bold mb-4'>공개된 다이어리</h3>
-
-          {/* 다이어리 그리드 - 스크롤 가능한 별도 박스 */}
-          <div className='overflow-y-auto max-h-[600px] pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100'>
+          <div className='overflow-y-auto max-h-[700px] pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100'>
             <div className='grid grid-cols-3 gap-4'>
               {diaries.length > 0 ? (
                 diaries.map((diary, index) => (
