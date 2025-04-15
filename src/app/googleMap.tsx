@@ -12,6 +12,31 @@ export interface MapMarker {
   title?: string;
 }
 
+const createCustomMarkerIcon = (imageUrl: string) => {
+  // SVG 마커 템플릿
+  const svg = `
+    <svg width="40" height="54" viewBox="0 0 40 54" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <!-- 핀 형태 배경 -->
+      <path fill="#FFFFFF" stroke="#DDDDDD" stroke-width="2" d="M20,2 C9.07,2 0.5,10.57 0.5,21.5 C0.5,34.67 12.99,43.67 20,52 C27.01,43.67 39.5,34.67 39.5,21.5 C39.5,10.57 30.93,2 20,2 Z" />
+      
+      <!-- 클리핑 패스 (이미지를 원형으로 자르기 위함) -->
+      <defs>
+        <clipPath id="circleClip">
+          <circle cx="20" cy="21" r="15" />
+        </clipPath>
+      </defs>
+      
+      <!-- 원형으로 잘린 이미지 -->
+      <image clip-path="url(#circleClip)" x="5" y="6" width="30" height="30" xlink:href="${imageUrl}" />
+      
+      <!-- 이미지 테두리 -->
+      <circle cx="20" cy="21" r="15" fill="none" stroke="#FFFFFF" stroke-width="2" />
+    </svg>
+  `;
+
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+};
+
 interface GoogleMapComponentProps {
   markers: MapMarker[];
   onZoomChanged?: (newZoom: number) => void;
@@ -321,8 +346,9 @@ export default function GoogleMapComponent({
               position={{ lat: marker.lat, lng: marker.lng }}
               title={marker.title}
               icon={{
-                url: marker.profileUrl,
-                scaledSize: new window.google.maps.Size(30, 30),
+                url: createCustomMarkerIcon(marker.profileUrl),
+                scaledSize: new window.google.maps.Size(40, 54),
+                anchor: new window.google.maps.Point(20, 52),
               }}
               zIndex={isInPath ? 100 : 10}
               onClick={() => {
