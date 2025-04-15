@@ -577,6 +577,7 @@ export default function HomePage() {
             initialZoom={zoomLevel}
             isExpanded={isMapExpanded}
             onExpandMap={handleExpandMap}
+            height={isMapExpanded ? undefined : '400px'}
           />
 
           {/* 맵 로딩 오버레이 */}
