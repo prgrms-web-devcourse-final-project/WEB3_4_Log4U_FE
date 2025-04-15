@@ -182,6 +182,7 @@ export default function GoogleMapComponent({
 
   // 마커 렌더링
   const renderMarkers = () => {
+    console.log(markers);
     if (!markers || markers.length === 0) {
       console.log('표시할 마커가 없습니다.');
       return null;
@@ -285,11 +286,7 @@ export default function GoogleMapComponent({
             <Marker
               key={marker.id}
               position={{ lat: marker.lat, lng: marker.lng }}
-              icon={{
-                url: marker.profileUrl || '/diary-thumbnail-test.png',
-                scaledSize: new window.google.maps.Size(50, 50),
-                anchor: new window.google.maps.Point(25, 25),
-              }}
+              // 기본 마커 사용
               title={marker.title}
               // 경로에 포함된 마커는 더 높은 z-index로 설정하여 강조
               zIndex={isInPath ? 100 : 10}
@@ -357,8 +354,8 @@ export default function GoogleMapComponent({
           />
         )}
 
-        {/* 가까운 마커들을 연결하는 경로 (항상 표시) */}
-        {pathPoints.length > 1 && (
+        {/* 가까운 마커들을 연결하는 경로 (클러스터링 사용 시 표시하지 않음) */}
+        {pathPoints.length > 1 && !markers.some(marker => marker.count !== undefined) && (
           <Polyline
             path={pathPoints}
             options={{
