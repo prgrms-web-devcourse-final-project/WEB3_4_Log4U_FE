@@ -48,6 +48,9 @@ function SearchContent() {
   // 정렬 방식 설정
   const sort = activeTab === '최신순' ? Diary.SortType.LATEST : Diary.SortType.POPULAR;
 
+  // 지도 확장 상태 추가
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
+
   // 검색 타입 변경 핸들러
   const handleSearchTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newType = e.target.value as '내용' | '작가';
@@ -110,7 +113,7 @@ function SearchContent() {
     [query, sort, cursorId, loading]
   );
 
-  // 맵 데이터 로드 함수에 더 많은 로깅 추가
+  // 맵 데이터 로드 함수
   const loadMapData = useCallback(async () => {
     if (!mapBounds || mapLoading) {
       console.log('맵 로드 건너뜀: bounds 없음 또는 로딩 중', { mapBounds, mapLoading });
@@ -134,7 +137,7 @@ function SearchContent() {
       };
 
       if (zoomLevel <= 13) {
-        // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드 (일반 지도)
+        // 줌 레벨이 13 이하일 경우 클러스터 데이터 로드
         const clusters = await MapService.getMapCluster(query);
         console.log(
           `클러스터 데이터 로드 완료: ${clusters.length}개, 줌 레벨: ${zoomLevel}`,
@@ -155,17 +158,13 @@ function SearchContent() {
 
         console.log(`클러스터 마커 생성: ${markers.length}개`, markers);
         setMapMarkers(markers);
-        console.log('클러스터 마커 설정 후', mapMarkers); // 주의: 상태 업데이트는 비동기적이므로 여기서는 이전 값이 보일 수 있음
       } else {
-        // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드 (일반 지도)
+        // 줌 레벨이 14 이상일 경우 다이어리 데이터 로드
         const diaries = await MapService.getMapDiaries(query);
         console.log(
           `다이어리 데이터 로드 완료: ${diaries.length}개, 줌 레벨: ${zoomLevel}`,
           diaries
         );
-        console.log('diaries');
-        console.log(diaries, 'diaries!!!!!!');
-        console.log('diaries.length', diaries.length);
 
         // 유효한 좌표가 있는 다이어리만 필터링
         const validDiaries = diaries.filter(
@@ -199,10 +198,6 @@ function SearchContent() {
       setMapMarkers([]); // 오류 시 마커 초기화
     } finally {
       setMapLoading(false);
-      // 상태 업데이트 확인을 위한 setTimeout (디버깅용)
-      setTimeout(() => {
-        console.log('맵 로드 완료 후 마커 상태:', mapMarkers.length);
-      }, 0);
     }
   }, [mapBounds, zoomLevel, mapLoading, mapMarkers.length]);
 
@@ -239,6 +234,11 @@ function SearchContent() {
     [zoomLevel, mapBounds, loadMapData]
   );
 
+  // 맵 확장 토글 핸들러
+  const handleExpandMap = useCallback(() => {
+    setIsMapExpanded(prev => !prev);
+  }, []);
+
   // 맵 경계 또는 줌 레벨 변경 시 데이터 로드 (디바운싱 적용)
   useEffect(() => {
     // 이전 타이머가 있으면 취소
@@ -260,7 +260,7 @@ function SearchContent() {
         clearTimeout(mapDataTimerRef.current);
       }
     };
-  }, [mapBounds, zoomLevel]);
+  }, [mapBounds, zoomLevel, isMapExpanded, loadMapData]); // isMapExpanded 추가하여 확장시 맵 데이터 새로고침
 
   // 맵 경계 변경 처리 함수
   const handleBoundsChanged = useCallback(
@@ -286,10 +286,13 @@ function SearchContent() {
     setCursorId(undefined);
     setHasMore(true);
     fetchSearchResults(true);
-  }, [query, activeTab]);
+  }, [query, activeTab, fetchSearchResults]);
 
   // 무한 스크롤 설정
   useEffect(() => {
+    // 지도가 확장되어 있을 때는 무한 스크롤 비활성화
+    if (isMapExpanded) return;
+
     // 이전 옵저버 정리
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -320,7 +323,18 @@ function SearchContent() {
         observerRef.current.disconnect();
       }
     };
-  }, [fetchSearchResults, hasMore, loading]);
+  }, [fetchSearchResults, hasMore, loading, isMapExpanded]);
+
+  // 지도 중심 좌표 추가
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
+    lat: 37.5665, // 초기 서울 중심 좌표
+    lng: 126.978,
+  });
+
+  // 중심 좌표 변경 핸들러 추가
+  const handleCenterChanged = useCallback((newCenter: { lat: number; lng: number }) => {
+    setMapCenter(newCenter);
+  }, []);
 
   // 검색 제출 핸들러
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -341,19 +355,8 @@ function SearchContent() {
     setHasMore(true);
   };
 
-  // 지도 중심 좌표 추가
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
-    lat: 37.5665, // 초기 서울 중심 좌표
-    lng: 126.978,
-  });
-
-  // 중심 좌표 변경 핸들러 추가
-  const handleCenterChanged = useCallback((newCenter: { lat: number; lng: number }) => {
-    setMapCenter(newCenter);
-  }, []);
-
   return (
-    <div className='flex'>
+    <div className='flex flex-col'>
       {/* 중앙 컨텐츠 */}
       <div className='flex-1 p-4'>
         <div className='pb-4 border-b'>
@@ -401,36 +404,40 @@ function SearchContent() {
             </button>
           </form>
 
-          {/* 탭 메뉴 */}
-          <div className='flex max-w-md mx-auto'>
-            <button
-              onClick={() => handleTabChange('최신순')}
-              className={`flex-1 py-2 text-center border-b-2 ${activeTab === '최신순' ? 'border-gray-900 font-bold' : 'border-gray-200 text-gray-500'}`}
-            >
-              최신순
-            </button>
-            <button
-              onClick={() => handleTabChange('인기순')}
-              className={`flex-1 py-2 text-center border-b-2 ${activeTab === '인기순' ? 'border-gray-900 font-bold' : 'border-gray-200 text-gray-500'}`}
-            >
-              인기순
-            </button>
-          </div>
+          {/* 탭 메뉴 - 지도가 확장되었을 때는 숨김 */}
+          {!isMapExpanded && (
+            <div className='flex max-w-md mx-auto'>
+              <button
+                onClick={() => handleTabChange('최신순')}
+                className={`flex-1 py-2 text-center border-b-2 ${activeTab === '최신순' ? 'border-gray-900 font-bold' : 'border-gray-200 text-gray-500'}`}
+              >
+                최신순
+              </button>
+              <button
+                onClick={() => handleTabChange('인기순')}
+                className={`flex-1 py-2 text-center border-b-2 ${activeTab === '인기순' ? 'border-gray-900 font-bold' : 'border-gray-200 text-gray-500'}`}
+              >
+                인기순
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* 구글 맵 영역 */}
-        <div className='mt-4 relative rounded-lg overflow-hidden h-[400px] border shadow-sm'>
-          {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
-              onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
+        {/* 구글 맵 영역 - 확장 상태에 따라 크기 조절 */}
+        <div
+          className={`mt-4 relative rounded-lg overflow-hidden border shadow-sm transition-all duration-300 ${isMapExpanded ? 'h-[calc(100vh-150px)]' : 'h-[300px]'}`}
+        >
+          {/* 구글 맵 컴포넌트 */}
           <GoogleMapComponent
-            key={`map-${Math.floor(zoomLevel)}`}
+            key={`map-${Math.floor(zoomLevel)}-${isMapExpanded ? 'expanded' : 'normal'}`}
             markers={mapMarkers?.filter(marker => marker.lat && marker.lng) ?? []}
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
             onCenterChanged={handleCenterChanged}
             initialZoom={zoomLevel}
-            initialCenter={mapCenter} // 현재 중심 좌표 전달
-            height='400px'
+            initialCenter={mapCenter}
+            isExpanded={isMapExpanded}
+            onExpandMap={handleExpandMap}
           />
 
           {/* 맵 로딩 오버레이 */}
@@ -446,92 +453,96 @@ function SearchContent() {
           </div>
         </div>
 
-        {/* 다이어리 그리드 - 무한 스크롤을 위한 컨테이너 */}
-        <div ref={diariesContainerRef} className='mt-6 overflow-y-auto max-h-[500px] pr-2'>
-          <div className='grid grid-cols-3 gap-4'>
-            {diaries.length === 0 && !loading ? (
-              <div className='col-span-3 text-center py-8 text-gray-500'>검색 결과가 없습니다.</div>
-            ) : (
-              diaries.map((diary, index) => (
-                <div key={diary.diaryId} ref={index === diaries.length - 1 ? lastDiaryRef : null}>
-                  <Link
-                    href={`/diaries/${diary.diaryId}`}
-                    className='block border rounded-lg overflow-hidden hover:shadow-md transition h-full'
-                  >
-                    <div className='h-52 bg-gray-200 relative'>
-                      <img
-                        src={diary.thumbnailUrl || '/diary-thumbnail-test.png'}
-                        alt='다이어리 이미지'
-                        className='w-full h-full object-cover'
-                      />
-                      {/* 좋아요 수 - 이미지 우측 하단에 오버레이 */}
-                      <div className='absolute bottom-2 right-2 bg-black bg-opacity-50 text-white rounded-full px-2 py-1 flex items-center text-xs'>
-                        <svg className='w-3 h-3 mr-1' fill='currentColor' viewBox='0 0 20 20'>
-                          <path
-                            fillRule='evenodd'
-                            d='M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z'
-                            clipRule='evenodd'
-                          />
-                        </svg>
-                        <span>{diary.likeCount || 0}</span>
-                      </div>
-                    </div>
-                    <div className='p-3 text-sm'>
-                      {/* 다이어리 제목 */}
-                      <h3 className='font-bold text-gray-800 truncate'>
-                        {diary.title || '제목 없음'}
-                      </h3>
-
-                      <div className='flex items-center justify-between mt-2 text-xs text-gray-600'>
-                        {/* 작성자 정보 */}
-                        <div className='flex items-center'>
-                          {diary.authorProfileImage && (
-                            <div className='w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0'>
-                              <img
-                                src={diary.authorProfileImage}
-                                alt={`${diary.authorNickname}의 프로필`}
-                                className='w-full h-full object-cover'
-                              />
-                            </div>
-                          )}
-                          <span className='truncate max-w-[120px]'>
-                            {diary.authorNickname || '작성자 정보 없음'}
-                          </span>
-                        </div>
-
-                        {/* 위치 정보 */}
-                        <div
-                          className='truncate max-w-[120px]'
-                          title={`${diary.location.sido || ''} ${diary.location.sigungu || ''} ${diary.location.eupmyeondong || ''}`}
-                        >
-                          {diary.location.sigungu && diary.location.eupmyeondong
-                            ? `${diary.location.sigungu} ${diary.location.eupmyeondong}`
-                            : diary.location.eupmyeondong ||
-                              diary.location.sigungu ||
-                              '위치 정보 없음'}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+        {/* 다이어리 그리드 - 지도가 확장되었을 때는 숨김 */}
+        {!isMapExpanded && (
+          <div ref={diariesContainerRef} className='mt-6 overflow-y-auto max-h-[500px] pr-2'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
+              {diaries.length === 0 && !loading ? (
+                <div className='col-span-3 text-center py-8 text-gray-500'>
+                  검색 결과가 없습니다.
                 </div>
-              ))
+              ) : (
+                diaries.map((diary, index) => (
+                  <div key={diary.diaryId} ref={index === diaries.length - 1 ? lastDiaryRef : null}>
+                    <Link
+                      href={`/diaries/${diary.diaryId}`}
+                      className='block border rounded-lg overflow-hidden hover:shadow-md transition h-full'
+                    >
+                      <div className='h-52 bg-gray-200 relative'>
+                        <img
+                          src={diary.thumbnailUrl || '/diary-thumbnail-test.png'}
+                          alt='다이어리 이미지'
+                          className='w-full h-full object-cover'
+                        />
+                        {/* 좋아요 수 */}
+                        <div className='absolute bottom-2 right-2 bg-black bg-opacity-50 text-white rounded-full px-2 py-1 flex items-center text-xs'>
+                          <svg className='w-3 h-3 mr-1' fill='currentColor' viewBox='0 0 20 20'>
+                            <path
+                              fillRule='evenodd'
+                              d='M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z'
+                              clipRule='evenodd'
+                            />
+                          </svg>
+                          <span>{diary.likeCount || 0}</span>
+                        </div>
+                      </div>
+                      <div className='p-3 text-sm'>
+                        {/* 다이어리 제목 */}
+                        <h3 className='font-bold text-gray-800 truncate'>
+                          {diary.title || '제목 없음'}
+                        </h3>
+
+                        <div className='flex items-center justify-between mt-2 text-xs text-gray-600'>
+                          {/* 작성자 정보 */}
+                          <div className='flex items-center'>
+                            {diary.authorProfileImage && (
+                              <div className='w-4 h-4 rounded-full overflow-hidden mr-1 flex-shrink-0'>
+                                <img
+                                  src={diary.authorProfileImage}
+                                  alt={`${diary.authorNickname}의 프로필`}
+                                  className='w-full h-full object-cover'
+                                />
+                              </div>
+                            )}
+                            <span className='truncate max-w-[120px]'>
+                              {diary.authorNickname || '작성자 정보 없음'}
+                            </span>
+                          </div>
+
+                          {/* 위치 정보 */}
+                          <div
+                            className='truncate max-w-[120px]'
+                            title={`${diary.location.sido || ''} ${diary.location.sigungu || ''} ${diary.location.eupmyeondong || ''}`}
+                          >
+                            {diary.location.sigungu && diary.location.eupmyeondong
+                              ? `${diary.location.sigungu} ${diary.location.eupmyeondong}`
+                              : diary.location.eupmyeondong ||
+                                diary.location.sigungu ||
+                                '위치 정보 없음'}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 로딩 표시 */}
+            {loading && (
+              <div className='col-span-3 flex justify-center py-4'>
+                <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900'></div>
+              </div>
+            )}
+
+            {/* 더 이상 로딩할 데이터가 없을 때 */}
+            {!hasMore && diaries.length > 0 && (
+              <div className='col-span-3 text-center py-4 text-gray-500'>
+                더 이상 표시할 다이어리가 없습니다.
+              </div>
             )}
           </div>
-
-          {/* 로딩 표시 */}
-          {loading && (
-            <div className='col-span-3 flex justify-center py-4'>
-              <div className='animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900'></div>
-            </div>
-          )}
-
-          {/* 더 이상 로딩할 데이터가 없을 때 */}
-          {!hasMore && diaries.length > 0 && (
-            <div className='col-span-3 text-center py-4 text-gray-500'>
-              더 이상 표시할 다이어리가 없습니다.
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

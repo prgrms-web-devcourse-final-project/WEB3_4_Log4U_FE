@@ -11,9 +11,9 @@ export interface MapMarker {
   count?: number;
   title?: string;
 }
-// 클러스터 마커 생성 함수 (기존 함수 유지)
+
+// 클러스터 마커 생성 함수
 const createClusterIcon = (count: number, style: ClusterStyle): string => {
-  // SVG 원형 마커 생성
   const svg = `
   <svg width="${style.scale}" height="${style.scale}" viewBox="0 0 ${style.scale} ${style.scale}" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="${style.scale / 2}" cy="${style.scale / 2}" r="${style.scale / 2 - 2}" fill="${style.bgColor}" stroke="${style.borderColor}" stroke-width="2"/>
@@ -44,6 +44,8 @@ interface GoogleMapComponentProps {
   initialZoom?: number;
   initialCenter?: { lat: number; lng: number };
   height?: string;
+  onExpandMap?: () => void; // 새로운 prop - 지도 확장 요청 콜백
+  isExpanded?: boolean; // 새로운 prop - 지도가 확장됐는지 여부
 }
 
 export default function GoogleMapComponent({
@@ -54,15 +56,13 @@ export default function GoogleMapComponent({
   initialZoom = 11,
   initialCenter,
   height = '300px',
-}: GoogleMapComponentProps & {
-  initialCenter?: { lat: number; lng: number };
-}) {
-  console.log(markers, 'markers!!!!!!');
-
+  onExpandMap,
+  isExpanded = false,
+}: GoogleMapComponentProps) {
   // 맵 레퍼런스
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // 지도 중심 좌표 상태 추가 - 초기값을 props에서 받을 수 있도록 수정
+  // 지도 중심 좌표 상태
   const [center, setCenter] = useState({
     lat: initialCenter?.lat || 37.5665, // 서울 기본값 또는 전달받은 값
     lng: initialCenter?.lng || 126.978,
@@ -71,12 +71,13 @@ export default function GoogleMapComponent({
   // 현재 중심 좌표를 부모 컴포넌트에 전달
   const centerChangedRef = useRef(false);
 
-  // 현재 줌 레벨 상태 추가
+  // 현재 줌 레벨 상태
   const [currentZoom, setCurrentZoom] = useState(initialZoom);
+
   // 최근에 이벤트가 처리된 시간 저장
   const lastEventTimeRef = useRef<number>(0);
 
-  // 마커 아이콘 Cache 추가
+  // 마커 아이콘 Cache
   const [markerIcons, setMarkerIcons] = useState<{ [key: string]: string }>({});
 
   // 구글 맵 API 로드
@@ -85,10 +86,11 @@ export default function GoogleMapComponent({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY || '',
   });
 
-  // 지도 컨테이너 스타일
+  // 지도 컨테이너 스타일 - 확장 상태에 따라 높이 조절
   const mapContainerStyle = {
     width: '100%',
-    height: height,
+    height: isExpanded ? 'calc(100vh - 100px)' : height, // 확장 시 화면 거의 전체 사용
+    transition: 'height 0.3s ease', // 부드러운 전환 효과
   };
 
   // 마커 아이콘 미리 로드
@@ -120,6 +122,29 @@ export default function GoogleMapComponent({
 
     loadMarkerIcons();
   }, [markers]);
+
+  // 지도 확장 시 맵 리사이즈 트리거
+  useEffect(() => {
+    if (isExpanded && mapRef.current) {
+      // 지도 크기 변경 후 지도 레이아웃 재조정 (필수)
+      window.google?.maps?.event?.trigger(mapRef.current, 'resize');
+
+      // 경계 정보 다시 가져오기
+      if (onBoundsChanged && mapRef.current) {
+        const bounds = mapRef.current.getBounds();
+        if (bounds) {
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          onBoundsChanged({
+            north: ne.lat(),
+            east: ne.lng(),
+            south: sw.lat(),
+            west: sw.lng(),
+          });
+        }
+      }
+    }
+  }, [isExpanded, onBoundsChanged]);
 
   // 맵 로드 완료 핸들러
   const handleMapLoad = useCallback(
@@ -154,7 +179,7 @@ export default function GoogleMapComponent({
     }
   }, []);
 
-  // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때) - 수정
+  // 맵 이동/줌 완료 후 핸들러 (idle 상태일 때)
   const handleIdle = useCallback(() => {
     if (!mapRef.current) return;
 
@@ -203,7 +228,13 @@ export default function GoogleMapComponent({
     });
   }, [onZoomChanged, onBoundsChanged, onCenterChanged, initialZoom, currentZoom, throttleEvent]);
 
-  // 마커 렌더링 - 렌더링마다 불필요한 로그 제거
+  // 지도 클릭 핸들러 - 확장 상태 토글
+  const handleMapClick = useCallback(() => {
+    // 확장 버튼과 겹치지 않도록 지도 클릭 시 확장은 미사용
+    // 대신 전용 버튼을 사용
+  }, []);
+
+  // 마커 렌더링
   const renderedMarkers = useMemo(() => {
     if (!markers || markers.length === 0) {
       return null;
@@ -317,13 +348,14 @@ export default function GoogleMapComponent({
     );
 
   return (
-    <div style={{ height: '100%' }}>
+    <div style={{ height: '100%', position: 'relative' }}>
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
         zoom={initialZoom}
         onLoad={handleMapLoad}
         onIdle={handleIdle}
+        onClick={handleMapClick}
         options={{
           disableDefaultUI: true,
           zoomControl: true,
@@ -336,9 +368,50 @@ export default function GoogleMapComponent({
           ],
         }}
       >
-        {/* 마커들 렌더링 - 함수 호출 대신 메모이제이션된 값 사용 */}
+        {/* 마커들 렌더링 */}
         {renderedMarkers}
       </GoogleMap>
+
+      {/* 확장 버튼 - 우측 상단에 배치 */}
+      <button
+        onClick={onExpandMap}
+        className='absolute top-2 right-2 bg-white p-2 rounded-full shadow-md z-10 hover:bg-gray-100 transition-colors'
+        title={isExpanded ? '지도 축소' : '지도 확장'}
+      >
+        {isExpanded ? (
+          // 축소 아이콘
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            className='h-5 w-5'
+            fill='none'
+            viewBox='0 0 24 24'
+            stroke='currentColor'
+          >
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M6 18L18 6M6 6l12 12'
+            />
+          </svg>
+        ) : (
+          // 확장 아이콘
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            className='h-5 w-5'
+            fill='none'
+            viewBox='0 0 24 24'
+            stroke='currentColor'
+          >
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5'
+            />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
