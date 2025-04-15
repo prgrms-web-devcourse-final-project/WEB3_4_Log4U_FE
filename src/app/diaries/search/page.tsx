@@ -185,7 +185,7 @@ function SearchContent() {
         clearTimeout(mapDataTimerRef.current);
       }
     };
-  }, [mapBounds, zoomLevel, loadMapData]);
+  }, [mapBounds, zoomLevel]);
 
   // 줌 레벨 변경 처리 함수
   const handleZoomChanged = useCallback(
