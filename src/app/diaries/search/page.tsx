@@ -352,7 +352,7 @@ function SearchContent() {
         </div>
 
         {/* 구글 맵 영역 */}
-        <div className='mt-4 relative rounded-lg overflow-hidden h-64'>
+        <div className='mt-4 relative rounded-lg overflow-hidden h-[300px] border shadow-sm'>
           {/* 구글 맵 컴포넌트 - GoogleMapComponent는 내부적으로 onIdle 이벤트에서 
               onZoomChanged와 onBoundsChanged를 호출하는 구조임 */}
           <GoogleMapComponent

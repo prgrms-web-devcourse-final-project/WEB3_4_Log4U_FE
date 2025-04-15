@@ -27,7 +27,7 @@ export default function GoogleMapComponent({
   onBoundsChanged,
   initialZoom = 11,
   pathColor = '#FF5353',
-  height = '100vh',
+  height = '300px',
 }: GoogleMapComponentProps) {
   // 맵 레퍼런스
   const mapRef = useRef<google.maps.Map | null>(null);

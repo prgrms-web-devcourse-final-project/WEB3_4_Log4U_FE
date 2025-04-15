@@ -509,7 +509,6 @@ export default function HomePage() {
             onZoomChanged={handleZoomChanged}
             onBoundsChanged={handleBoundsChanged}
             initialZoom={zoomLevel}
-            height='300px'
           />
         </div>
 
